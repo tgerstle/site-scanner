@@ -1,0 +1,30 @@
+{
+  "name": "scanner",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [],
+  "license": "ISC",
+  "author": "",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "vitest run",
+    "test:e2e": "vitest run tests/integration/scanner.test.ts",
+    "test:watch": "vitest",
+    "lint": "oxlint --ignore-path .oxlintignore",
+    "format": "oxfmt --write ."
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "oxfmt": "^0.36.0",
+    "oxlint": "^1.51.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

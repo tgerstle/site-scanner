@@ -1,0 +1,71 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import ViolationViewer from '../../../components/ViolationViewer';
+import { getPageDetails } from '../../../lib/queries';
+
+const { id } = Astro.params;
+const url = Astro.url.searchParams.get('url');
+
+if (!id || !url) {
+  return Astro.redirect('/runs');
+}
+
+const details = getPageDetails(id, url);
+const violations = details?.a11y_violations || [];
+---
+
+<Layout title="Page Details">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-6">
+      <a href={`/runs/${id}`} class="text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium">
+        &larr; Back to Run
+      </a>
+    </div>
+
+    {details && (
+      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Lighthouse Scores</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="p-4 border rounded-lg text-center bg-gray-50">
+            <div class="text-sm font-medium text-gray-500 uppercase tracking-wide">Performance</div>
+            <div class={`text-3xl font-bold mt-2 ${
+              (details.custom_data?.performance_score || 0) >= 0.9 ? 'text-green-600' :
+              (details.custom_data?.performance_score || 0) >= 0.5 ? 'text-yellow-600' : 'text-red-600'
+            }`}>
+              {Math.round((details.custom_data?.performance_score || 0) * 100)}
+            </div>
+          </div>
+          <div class="p-4 border rounded-lg text-center bg-gray-50">
+            <div class="text-sm font-medium text-gray-500 uppercase tracking-wide">Accessibility</div>
+            <div class={`text-3xl font-bold mt-2 ${
+              (details.custom_data?.accessibility_score || 0) >= 0.9 ? 'text-green-600' :
+              (details.custom_data?.accessibility_score || 0) >= 0.5 ? 'text-yellow-600' : 'text-red-600'
+            }`}>
+              {Math.round((details.custom_data?.accessibility_score || 0) * 100)}
+            </div>
+          </div>
+          <div class="p-4 border rounded-lg text-center bg-gray-50">
+            <div class="text-sm font-medium text-gray-500 uppercase tracking-wide">Best Practices</div>
+            <div class={`text-3xl font-bold mt-2 ${
+              (details.custom_data?.best_practices_score || 0) >= 0.9 ? 'text-green-600' :
+              (details.custom_data?.best_practices_score || 0) >= 0.5 ? 'text-yellow-600' : 'text-red-600'
+            }`}>
+              {Math.round((details.custom_data?.best_practices_score || 0) * 100)}
+            </div>
+          </div>
+          <div class="p-4 border rounded-lg text-center bg-gray-50">
+            <div class="text-sm font-medium text-gray-500 uppercase tracking-wide">SEO</div>
+            <div class={`text-3xl font-bold mt-2 ${
+              (details.seo_score || 0) >= 0.9 ? 'text-green-600' :
+              (details.seo_score || 0) >= 0.5 ? 'text-yellow-600' : 'text-red-600'
+            }`}>
+              {Math.round((details.seo_score || 0) * 100)}
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    <ViolationViewer client:load violations={violations} url={url} />
+  </div>
+</Layout>

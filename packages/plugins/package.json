@@ -1,0 +1,21 @@
+{
+  "name": "plugins",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@axe-core/playwright": "^4.10.1",
+    "lighthouse": "^12.8.2",
+    "playwright-lighthouse": "^4.0.0",
+    "types": "*"
+  },
+  "devDependencies": {
+    "fastify": "^5.7.4",
+    "playwright": "^1.49.1",
+    "typescript": "^5.0.0"
+  }
+}

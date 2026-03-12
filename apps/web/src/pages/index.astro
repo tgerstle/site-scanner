@@ -1,0 +1,26 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Dashboard from '../components/Dashboard';
+
+import { getStats, getRecentUrls, getQueue } from '../lib/queries';
+
+const stats = getStats();
+const topUrls = getRecentUrls();
+const urlQueue = getQueue();
+---
+
+<Layout title="Scanner Dashboard">
+  <main class="max-w-7xl mx-auto p-4 md:p-8">
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Automated Audit Scanner</h1>
+      <p class="text-gray-600">Overview of recent accessibility and SEO audits.</p>
+    </div>
+
+    <Dashboard 
+      client:load 
+      initialStats={stats} 
+      initialRecentUrls={topUrls} 
+      initialQueue={urlQueue} 
+    />
+  </main>
+</Layout>

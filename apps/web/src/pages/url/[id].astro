@@ -1,0 +1,149 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import ViolationList from '../../components/ViolationList';
+
+import { getDb, initializeSchema } from 'db';
+import path from 'node:path';
+
+const { id } = Astro.params;
+const dbPath = process.env.AWA_DB_PATH || path.resolve(process.cwd(), '../../data/awa.sqlite');
+const db = getDb(dbPath);
+initializeSchema(db);
+
+const urlData = db.prepare('SELECT * FROM queue WHERE id = ?').get(id) as any;
+
+if (!urlData) {
+  return new Response(null, {
+    status: 404,
+    statusText: 'Not found'
+  });
+}
+
+const resultData = db.prepare('SELECT a11y_violations, custom_data FROM results WHERE run_id = ? AND url = ? ORDER BY timestamp DESC LIMIT 1').get(urlData.run_id, urlData.url) as any || {};
+const performanceFindings = db.prepare('SELECT title, description, score, display_value FROM performance_findings WHERE run_id = ? AND url = ? LIMIT 50').all(urlData.run_id, urlData.url) as any[];
+
+let violations: any[] = [];
+let lighthouseScores = {
+  performance: null,
+  accessibility: null,
+  best_practices: null,
+  seo: null
+};
+
+if (resultData.custom_data) {
+  try {
+    const cd = JSON.parse(resultData.custom_data);
+    lighthouseScores = {
+      performance: cd.performance_score,
+      accessibility: cd.accessibility_score,
+      best_practices: cd.best_practices_score,
+      seo: cd.seo_score || cd['seo-score']
+    };
+  } catch (e) {}
+}
+
+if (resultData.a11y_violations) {
+  try {
+    violations = JSON.parse(resultData.a11y_violations);
+  } catch (e) {}
+}
+
+// Format violations for component
+const formattedViolations = violations.map((v, idx) => ({
+  id: v.id || v.ruleId || 'unknown',
+  impact: v.impact || 'minor',
+  description: v.description || v.help || '',
+  context: v.nodes?.[0]?.html || v.html || '',
+  helpUrl: v.helpUrl || '',
+}));
+
+function getScoreColor(score) {
+  if (score === null || score === undefined) return 'bg-gray-100 text-gray-800';
+  if (score >= 0.9) return 'bg-green-100 text-green-800';
+  if (score >= 0.5) return 'bg-yellow-100 text-yellow-800';
+  return 'bg-red-100 text-red-800';
+}
+---
+<Layout title={`Audit for ${urlData.url}`}>
+  <main class="max-w-7xl mx-auto p-4 md:p-8">
+    <div class="mb-8 border-b border-gray-200 pb-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+        <h1 class="text-2xl font-bold text-gray-900 break-all">{urlData.url}</h1>
+        <a href={`/runs/${urlData.run_id}`} class="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm font-medium">
+          &larr; Back to Run
+        </a>
+      </div>
+      
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+        <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Performance</div>
+          <div class={`text-3xl font-bold inline-block px-3 py-1 rounded-full ${getScoreColor(lighthouseScores.performance)}`}>
+            {lighthouseScores.performance !== null ? Math.round(lighthouseScores.performance * 100) : '-'}
+          </div>
+        </div>
+        <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Accessibility</div>
+          <div class={`text-3xl font-bold inline-block px-3 py-1 rounded-full ${getScoreColor(lighthouseScores.accessibility)}`}>
+            {lighthouseScores.accessibility !== null ? Math.round(lighthouseScores.accessibility * 100) : '-'}
+          </div>
+        </div>
+        <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Best Practices</div>
+          <div class={`text-3xl font-bold inline-block px-3 py-1 rounded-full ${getScoreColor(lighthouseScores.best_practices)}`}>
+            {lighthouseScores.best_practices !== null ? Math.round(lighthouseScores.best_practices * 100) : '-'}
+          </div>
+        </div>
+        <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm text-center">
+          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">SEO</div>
+          <div class={`text-3xl font-bold inline-block px-3 py-1 rounded-full ${getScoreColor(lighthouseScores.seo)}`}>
+            {lighthouseScores.seo !== null ? Math.round(lighthouseScores.seo * 100) : '-'}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {performanceFindings.length > 0 && (
+      <div class="mb-8">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Performance Opportunities</h2>
+        <div class="bg-white shadow overflow-hidden sm:rounded-md border border-gray-200">
+          <ul class="divide-y divide-gray-200">
+            {performanceFindings.map((finding) => (
+              <li class="px-4 py-4 sm:px-6 hover:bg-gray-50">
+                <div class="flex items-center justify-between">
+                  <div class="flex-1 min-w-0 pr-4">
+                    <p class="text-sm font-medium text-blue-600 truncate">{finding.title}</p>
+                    <p class="mt-1 flex items-center text-sm text-gray-500">
+                      {finding.description}
+                    </p>
+                  </div>
+                  <div class="ml-4 flex-shrink-0 flex flex-col items-end">
+                    <span class={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getScoreColor(finding.score)}`}>
+                      Score: {Math.round(finding.score * 100)}
+                    </span>
+                    {finding.display_value && (
+                      <span class="mt-1 text-xs text-gray-500">{finding.display_value}</span>
+                    )}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    )}
+
+    <div class="mb-8">
+      <h2 class="text-xl font-bold text-gray-900 mb-4">Accessibility Violations</h2>
+      {formattedViolations.length === 0 ? (
+        <div class="bg-green-50 border border-green-200 rounded-md p-4 flex items-center">
+          <svg class="h-5 w-5 text-green-400 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+          </svg>
+          <span class="text-green-800 font-medium">No accessibility violations found!</span>
+        </div>
+      ) : (
+        <ViolationList client:load url={urlData.url} violations={formattedViolations} />
+      )}
+    </div>
+  </main>
+</Layout>

@@ -1,0 +1,19 @@
+{
+  "name": "db",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "types": "*"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.9",
+    "tsx": "^4.21.0",
+    "typescript": "^5.0.0"
+  }
+}
