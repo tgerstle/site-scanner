@@ -65,6 +65,26 @@ When a URL redirects (e.g., `product/abc` -> `product/abc/detail`), we must capt
 - **Persist:** `saveAuditResult` records the _original_ requested URL (to match queue) but also the _final_ URL and chain.
 - **Report:** Dashboard shows "Redirected via..." badge.
 
+## 4. Lifecycle Management & Shutdown Strategy
+
+**Problem:** Node.js processes hang if event loops, database connections, or child processes remain active.
+
+**Solution:** Explicit Cleanup Protocol.
+
+1.  **Orchestrator Responsibility:**
+    *   Track all spawned worker objects/PIDs.
+    *   Monitor the `queue` status.
+    *   When `queue` is empty and `active_workers === 0`: Trigger Shutdown.
+2.  **Graceful Shutdown Sequence:**
+    *   **Step 1:** Send `SIGTERM` (or custom IPC message `STOP`) to all workers.
+    *   **Step 2:** Await worker exit (with 5s force-kill timeout).
+    *   **Step 3:** Close Database connection (`db.close()`).
+    *   **Step 4:** Flush logs.
+    *   **Step 5:** `process.exit(exitCode)`.
+3.  **Signal Trapping:**
+    *   Listen for `SIGINT` (Ctrl+C) and `SIGTERM` in the main CLI process.
+    *   Run the same Shutdown Sequence, marking the run as `cancelled` in DB.
+
 ## Checkpoints
 
 - [ ] Add `page_types` column to DB schema.
