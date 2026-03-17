@@ -1,5 +1,13 @@
 // Ensure this matches your existing types or imports them
-import type { DashboardStats, QueueItem, RecentItem, RunSummary, RunDetail, PageSummary } from "../types";
+import type {
+    DashboardStats,
+    QueueItem,
+    RecentItem,
+    RunSummary,
+    RunDetail,
+    PageSummary,
+    CommonA11yIssue
+} from "../types";
 import { getDb, initializeSchema } from 'db';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -481,6 +489,93 @@ export function getCommonPerformanceIssues(runId: string): CommonIssue[] {
 
     } catch (e) {
         console.error('Error calculating common performance issues:', e);
+        return [];
+    }
+}
+
+
+export function getCommonAccessibilityIssues(runId: string): CommonA11yIssue[] {
+    const db = getDatabase();
+    try {
+        // 1. Get stats grouped by rule_id from the lightweight findings table
+        // We aggregate the pages as a JSON array of objects: {id, url, count}
+        // Note: count in a11y_findings is "instances on that page"
+        const stats = db.prepare(`
+            SELECT 
+                af.rule_id,
+                af.impact,
+                SUM(af.count) as total_instances,
+                COUNT(af.id) as affected_pages_count,
+                json_group_array(json_object('id', q.id, 'url', af.url, 'count', af.count)) as pages_json
+            FROM a11y_findings af
+            LEFT JOIN queue q ON af.run_id = q.run_id AND af.url = q.url
+            WHERE af.run_id = ?
+            GROUP BY af.rule_id
+            ORDER BY 
+                CASE af.impact 
+                    WHEN 'critical' THEN 1 
+                    WHEN 'serious' THEN 2 
+                    WHEN 'moderate' THEN 3 
+                    WHEN 'minor' THEN 4 
+                    ELSE 5 
+                END ASC,
+                total_instances DESC
+        `).all(runId);
+
+        const results: CommonA11yIssue[] = [];
+
+        for (const stat of stats as any[]) {
+            // 2. Hydrate title/desc by finding ONE example from the heavy results table
+            // We need this because a11y_findings table doesn't store the human-readable text
+            const pages = JSON.parse(stat.pages_json);
+            const example = pages[0]; // Just take the first one
+
+            if (!example) continue;
+
+            const resRow = db.prepare(`
+                SELECT a11y_violations 
+                FROM results 
+                WHERE run_id = ? AND url = ?
+            `).get(runId, example.url) as { a11y_violations: string };
+
+            if (!resRow || !resRow.a11y_violations) continue;
+
+            try {
+                const violations = JSON.parse(resRow.a11y_violations);
+                const specificViolation = violations.find((v: any) => v.id === stat.rule_id);
+
+                if (specificViolation) {
+                    results.push({
+                        rule_id: stat.rule_id,
+                        description: specificViolation.description,
+                        help: specificViolation.help,
+                        helpUrl: specificViolation.helpUrl,
+                        impact: stat.impact,
+                        total_instances: stat.total_instances,
+                        affected_pages_count: stat.affected_pages_count,
+                        pages: pages
+                    });
+                } else {
+                    // Fallback if not found in JSON (should exist if findings table says so)
+                    results.push({
+                        rule_id: stat.rule_id,
+                        description: "No description available",
+                        help: stat.rule_id,
+                        impact: stat.impact,
+                        total_instances: stat.total_instances,
+                        affected_pages_count: stat.affected_pages_count,
+                        pages: pages
+                    });
+                }
+            } catch (e) {
+                // JSON parse error
+            }
+        }
+
+        return results;
+
+    } catch (e) {
+        console.error('Error fetching a11y issues:', e);
         return [];
     }
 }

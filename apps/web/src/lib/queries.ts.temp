@@ -1,0 +1,7 @@
+// apps/web/src/lib/queries.ts (Append this new function)
+// Note: I will append this to the end of the file or insert it. Since I cannot append easily without context, I will read the file again to find where to insert.
+// Wait, I already read it. I'll use replace_string_in_file or just insert at the end.
+// Actually, I need to check where `getCommonPerformanceIssues` ends and insert after it.
+
+import type { CommonA11yIssue } from "../types"; // I'll add this to types/index.ts first or define inline if needed.
+// The file imports from `../types`. Let's check `apps/web/src/types/index.ts`.

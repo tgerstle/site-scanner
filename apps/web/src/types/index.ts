@@ -1,5 +1,7 @@
+
 export interface RunSpecificStats {
     runId: string;
+    description: string;
     status: string;
     created_at: string;
     completed_at?: string; // ISO 8601 string
@@ -13,6 +15,17 @@ export interface RunSpecificStats {
 }
 
 export type DashboardStats = RunSpecificStats[];
+
+export interface CommonA11yIssue {
+    rule_id: string;
+    description: string;
+    help: string;
+    helpUrl?: string;
+    impact: string;
+    total_instances: number;
+    affected_pages_count: number;
+    pages: { id: number; url: string; count: number }[];
+}
 
 export interface QueueItem {
     id: number;

@@ -49,14 +49,15 @@ if (resultData.a11y_violations) {
   } catch (e) {}
 }
 
-// Format violations for component
-const formattedViolations = violations.map((v, idx) => ({
-  id: v.id || v.ruleId || 'unknown',
-  impact: v.impact || 'minor',
-  description: v.description || v.help || '',
-  context: v.nodes?.[0]?.html || v.html || '',
-  helpUrl: v.helpUrl || '',
+const formattedViolations = violations.map((v) => ({
+    id: v.id,
+    impact: v.impact,
+    description: v.description,
+    help: v.help,
+    helpUrl: v.helpUrl,
+    nodes: v.nodes
 }));
+
 
 function getScoreColor(score) {
   if (score === null || score === undefined) return 'bg-gray-100 text-gray-800';
