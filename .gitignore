@@ -2,3 +2,4 @@ data/*.sqlite*
 node_modules
 dist
 .astro
+debug/*
