@@ -2,7 +2,7 @@
 
 **Goal:** Ensure that we can verify the "Cascading" logic logic without manual checks, and catch regressions as we add new capabilities.
 
-**Status:** Not Started
+**Status:** Completed
 
 ## 1. The "Golden Master" Regression Suite
 
@@ -72,6 +72,7 @@ We should add a benchmark test that measures the **Time to Classification**. Sin
 
 ## Checkpoints
 
-- [ ] Create `tests/fixtures/` with representative HTML.
-- [ ] Implement `tests/integration/golden-master.test.ts`.
-- [ ] Add `npm run test:golden` command.
+- [x] Create `tests/fixtures/` with representative HTML.
+- [x] Implement `tests/integration/classifier-suite/golden-master.test.ts`.
+- [x] Add `npm run test:golden` command.
+- [x] Implement Unit Tests for Plugin Resolver (`packages/core/src/plugin-resolver.test.ts`).

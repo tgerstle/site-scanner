@@ -5,6 +5,7 @@ export default function RunTrigger() {
   const [url, setUrl] = useState("https://example.com");
   const [urlList, setUrlList] = useState("");
   const [depth, setDepth] = useState<number | "">("");
+  const [networkWait, setNetworkWait] = useState<number>(5000);
   const [plugins, setPlugins] = useState<string[]>(["axe", "lighthouse"]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -13,16 +14,16 @@ export default function RunTrigger() {
     setLoading(true);
     setMessage("");
 
+    const basePayload = { depth, plugins, networkIdleTimeout: networkWait };
     const payload =
       mode === "single"
-        ? { url, depth, plugins }
+        ? { url, ...basePayload }
         : {
             urls: urlList
               .split(/[\n,]+/)
               .map((u) => u.trim())
               .filter(Boolean),
-            depth,
-            plugins,
+            ...basePayload,
           };
 
     if (mode === "list" && (payload as any).urls.length === 0) {
@@ -136,6 +137,24 @@ export default function RunTrigger() {
                 placeholder={mode === "list" ? "0 (Audit Only)" : "3"}
                 className="px-2 py-1 border rounded w-32"
               />
+            </div>
+            <div className="flex items-center gap-2">
+              <label
+                className="font-medium text-gray-700 w-24 whitespace-nowrap"
+                title="Wait for network idle (ms)"
+              >
+                Network Wait:
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="100"
+                value={networkWait}
+                onChange={(e) => setNetworkWait(parseInt(e.target.value))}
+                placeholder="5000"
+                className="px-2 py-1 border rounded w-32"
+              />
+              <span className="text-gray-400 text-xs">ms (0 to disable)</span>
             </div>
             <div className="flex items-start gap-2 pt-1">
               <label className="font-medium text-gray-700 w-24 pt-0.5">

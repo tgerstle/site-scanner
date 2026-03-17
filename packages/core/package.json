@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "db": "*",
+    "fast-xml-parser": "^5.5.3",
     "playwright": "^1.58.2",
     "plugins": "^1.0.0",
     "types": "*"

@@ -32,3 +32,19 @@ export function getRunConfig(db: Database, runId: string): any {
     }
     return {};
 }
+
+export function stopRun(db: Database, runId: string): void {
+    // 1. Mark run as stopped
+    db.prepare("UPDATE runs SET status = 'stopped', completed_at = ? WHERE id = ?").run(
+        new Date().toISOString(),
+        runId
+    );
+
+    // 2. Mark pending/processing jobs as stopped
+    db.prepare(`
+        UPDATE queue 
+        SET status = 'stopped' 
+        WHERE run_id = ? 
+        AND status IN ('pending', 'processing', 'processing_discovery', 'pending_audit', 'processing_audit', 'running')
+    `).run(runId);
+}

@@ -2,7 +2,15 @@
 
 **Goal:** Implement the logic that takes a URL and a Page (DOM) and determines the `PageType`.
 
-**Status:** Not Started
+**Status:** Completed
+
+## Outcomes
+
+- Created `packages/core/src/classifier.ts`
+- Implemented `PageClassifier` with selector and URL pattern matching
+- Updated `AuditWorker` to use classifier and dynamic plugin resolution
+- Added unit tests in `packages/core/src/classifier.test.ts`
+- Updated `AuditResults` type to include `_page_types` metadata
 
 ## 1. The `Classifier` Class
 

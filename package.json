@@ -15,9 +15,12 @@
     "build": "npm run build --workspaces",
     "test": "vitest run",
     "test:e2e": "vitest run tests/integration/scanner.test.ts",
+    "test:golden": "vitest run tests/integration/classifier-suite",
+    "test:unit": "vitest run packages/core/src/plugin-resolver.test.ts",
     "test:watch": "vitest",
     "lint": "oxlint --ignore-path .oxlintignore",
-    "format": "oxfmt --write ."
+    "format": "oxfmt --write .",
+    "kill:zombies": "pkill -f 'packages/cli' || echo 'No CLI process found'; pkill -f 'headless' || echo 'No headless Chrome found'"
   },
   "devDependencies": {
     "@types/node": "^25.3.3",
@@ -26,5 +29,8 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.5.3"
   }
 }

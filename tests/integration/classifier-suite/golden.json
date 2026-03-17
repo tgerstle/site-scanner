@@ -1,0 +1,14 @@
+{
+  "product-simple.html": {
+    "url": "http://example.com/shop/product/super-widget",
+    "expectedTypes": ["global", "product"]
+  },
+  "article-blog.html": {
+    "url": "http://example.com/blog/understanding-awa",
+    "expectedTypes": ["global", "article"]
+  },
+  "generic-search.html": {
+    "url": "http://example.com/search?q=test",
+    "expectedTypes": ["global"]
+  }
+}

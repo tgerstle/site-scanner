@@ -1,6 +1,7 @@
+import { ScannerConfig, PluginConfigObj } from "types"; // Added PluginConfigObj
 import type { WorkerRole } from "types";
 import { logEvent } from "./logger.js";
-import { getDb, getRunConfig } from "db";
+import { getDb, getRunConfig } from "db"; // Implicitly returns ScannerConfig
 import * as path from "node:path";
 import { DiscoveryWorker } from "./discovery-worker.js";
 import { AuditWorker } from "./audit-worker.js";
@@ -24,53 +25,63 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const dbPath = process.env.AWA_DB_PATH || path.resolve(process.cwd(), "data/awa.sqlite");
   const db = getDb(dbPath);
 
-  // Extract Run ID from workerId (format: runId_role_suffix)
-  // e.g., run_123_aud_1 -> run_123 (assuming run id includes 'run_')
-  // We can try to extract up to the second underscore if we follow the pattern exactly,
-  // or pass runId as an arg.
-  // Given current implementation in orchestrator: `${runId}_disc_1`
-  // And runId starts with run_.
-  // Let's perform a safer heuristic: runId is everything before last 2 underscores?
-  // Actually, runId is variable length.
-  // Let's assume the runId is embedded at the start.
-  // Or, safer: modify orchestrator to pass runId.
-  // But for now, let's extract it. The workerId is `${runId}_${role.substring(0,3)}_1`.
-  // So splitting by '_' from right might not work if runId has underscores (it does).
-  // But role suffix is fixed pattern from orchestrator.
-
-  // However, fetching config for the *Run* is best practice.
-  // Since we don't have runId passed explicitly, let's try to parse it.
-  // The runId format is: `run_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`.
-  // It has 3 parts separated by underscores.
-  // The workerId adds `_disc_1`.
-  // So workerId looks like: `run_TIMESTAMP_HASH_disc_1`.
-  // So we can join the first 3 parts.
+  // Parse Run ID from workerId (format: runId_role_suffix)
   const parts = workerId.split('_');
+  // Heuristic: run IDs typically have 3 components (run_TIMESTAMP_HASH).
+  // But if that changes, this is brittle.
+  // Better approach: pass runId as explicit argument. 
+  // For now, reconstruct based on known pattern.
   const runId = parts.slice(0, 3).join('_');
 
-  let worker: WorkerLoop;
-  if (role === "discovery") {
-    const config = getRunConfig(db, runId); // Fetch config
-    worker = new DiscoveryWorker(workerId, db, config);
-    worker.start();
-    process.on("SIGINT", () => worker!.stop());
-    process.on("SIGTERM", () => worker!.stop());
-  } else {
-    // dynamically load plugins from run config
-    const runConfig = getRunConfig(db, runId);
-    const pluginsToLoad = runConfig.plugins || [];
+  let worker: WorkerLoop | undefined;
 
-    // Fallback?
-    if (pluginsToLoad.length === 0) {
-      logEvent({ event: "worker_warning", severity: "warn", message: `No plugins found in config for run ${runId}`, workerId });
+  // Retrieve configuration
+  const runConfig = getRunConfig(db, runId) as ScannerConfig;
+
+  if (role === "discovery") {
+    worker = new DiscoveryWorker(workerId, db, runConfig);
+    worker.start();
+  } else {
+    // Collect all plugins needed for the run (legacy + cascading phases)
+    const pluginSet = new Set<string>();
+
+    // 1. Legacy plugins array
+    if (runConfig.plugins) {
+      runConfig.plugins.forEach(p => pluginSet.add(p));
     }
+
+    // 2. Cascading phases
+    if (runConfig.phases) {
+      Object.values(runConfig.phases).forEach(phasePlugins => {
+        phasePlugins.forEach(p => {
+          if (typeof p === 'string') {
+            pluginSet.add(p);
+          } else {
+            pluginSet.add(p.name);
+          }
+        });
+      });
+    }
+
+    // Default fallback if absolutely nothing is found (shouldn't happen with defaults)
+    if (pluginSet.size === 0) {
+      logEvent({ event: "worker_warning", severity: "warn", message: `No plugins found in config for run ${runId}, defaulting to 'axe'`, workerId });
+      pluginSet.add("axe");
+    }
+
+    const pluginsToLoad = Array.from(pluginSet);
+
+    logEvent({
+      event: "worker_init",
+      severity: "info",
+      message: `Loading plugins: ${pluginsToLoad.join(", ")}`,
+      workerId
+    });
 
     loadPlugins(pluginsToLoad)
       .then((pl) => {
         worker = new AuditWorker(workerId, db, runConfig, pl);
         worker.start();
-        process.on("SIGINT", () => worker!.stop());
-        process.on("SIGTERM", () => worker!.stop());
       })
       .catch((err) => {
         logEvent({
@@ -81,5 +92,15 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
         });
         process.exit(1);
       });
+  }
+
+  if (role === "discovery" || role === "audit") {
+    // Clean shutdown
+    const shutdown = () => {
+      if (worker) worker.stop();
+      process.exit(0);
+    };
+    process.on("SIGINT", shutdown);
+    process.on("SIGTERM", shutdown);
   }
 }

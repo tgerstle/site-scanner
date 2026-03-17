@@ -6,7 +6,7 @@ import fs from 'node:fs';
 
 let _db: ReturnType<typeof getDb> | null = null;
 
-function getDatabase() {
+export function getDatabase() {
     // In dev mode, or always for now to debug, let's create a fresh connection each request.
     // This avoids stale WAL reader issues if the DB is wiped externaly.
     if (_db) {
@@ -44,21 +44,21 @@ export function getStats(): DashboardStats {
 
     // Get active runs or most recent run
     const activeRuns = db.prepare(`
-        SELECT id, status, started_at, config_json 
+        SELECT id, status, started_at, completed_at, config_json 
         FROM runs 
         WHERE status IN ('running', 'pending')
         ORDER BY started_at DESC
-    `).all() as { id: string, status: string, started_at: string, config_json: string }[];
+    `).all() as { id: string, status: string, started_at: string, completed_at: string, config_json: string }[];
 
     let targetRuns = activeRuns;
     if (targetRuns.length === 0) {
         // Fallback to most recent run if no active runs
         const lastRun = db.prepare(`
-            SELECT id, status, started_at, config_json 
+            SELECT id, status, started_at, completed_at, config_json 
             FROM runs 
             ORDER BY started_at DESC 
             LIMIT 1
-        `).get() as { id: string, status: string, started_at: string, config_json: string } | undefined;
+        `).get() as { id: string, status: string, started_at: string, completed_at: string, config_json: string } | undefined;
 
         if (lastRun) targetRuns.push(lastRun);
     }
@@ -105,6 +105,7 @@ export function getStats(): DashboardStats {
             runId,
             status: run.status,
             created_at: run.started_at,
+            completed_at: run.completed_at,
             url: urlLabel,
             totalUrls: counts.total || 0,
             pendingUrls: counts.pending || 0,
@@ -160,6 +161,7 @@ export function getRuns(): RunSummary[] {
     SELECT 
       r.id, 
       r.started_at, 
+      r.completed_at,
       r.status, 
       r.config_json,
       (SELECT COUNT(*) FROM queue q WHERE q.run_id = r.id) as url_count,
@@ -190,7 +192,9 @@ export function getRunDetails(runId: string): RunDetail | null {
       q.depth,
       COALESCE(SUM(a.count), 0) as violation_count,
       r.seo_score,
-      r.custom_data
+      r.custom_data,
+      r.page_types,
+      r.redirect_url
     FROM queue q
     LEFT JOIN a11y_findings a ON q.url = a.url AND q.run_id = a.run_id
     LEFT JOIN results r ON q.url = r.url AND q.run_id = r.run_id
@@ -208,6 +212,20 @@ export function getRunDetails(runId: string): RunDetail | null {
         let page = { ...p };
         if (run.status === 'stopped' && ['pending', 'processing', 'pending_audit'].includes(p.status)) {
             page.status = 'stopped';
+        }
+
+        // Parse page_types if present
+        if (p.page_types) {
+            try {
+                page.pageTypes = JSON.parse(p.page_types);
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        // Map redirect_url
+        if (p.redirect_url) {
+            page.redirectUrl = p.redirect_url;
         }
 
         // Parse custom_data for lighthouse scores
@@ -343,6 +361,126 @@ export function getPerformanceFindings(runId: string): PerformanceFindingAggrega
         }));
     } catch (e) {
         console.error('Error fetching performance findings:', e);
+        return [];
+    }
+}
+
+export interface CommonIssue {
+    hash: string;
+    audit_id: string;
+    title: string;
+    description: string;
+    identifier: string; // URL, Selector, or Snippet
+    identifierType: 'url' | 'node' | 'text';
+    count: number;
+    potentialSavingsBytes: number;
+    potentialSavingsMs: number;
+    pages: string[];
+}
+
+export function getCommonPerformanceIssues(runId: string): CommonIssue[] {
+    const db = getDatabase();
+    try {
+        // Fetch all raw findings that have details
+        const findings = db.prepare(`
+            SELECT pf.audit_id, pf.title, pf.description, pf.details_json, pf.url as page_url, q.id as page_id
+            FROM performance_findings pf
+            JOIN queue q ON pf.run_id = q.run_id AND pf.url = q.url
+            WHERE pf.run_id = ? AND pf.details_json IS NOT NULL
+        `).all(runId) as { audit_id: string, title: string, description: string, details_json: string, page_url: string, page_id: number }[];
+
+        const issueMap = new Map<string, CommonIssue>();
+
+        for (const finding of findings) {
+            try {
+                const details = JSON.parse(finding.details_json);
+                if (!details.items || !Array.isArray(details.items)) continue;
+
+                for (const item of details.items) {
+                    let identifier = null;
+                    let type: 'url' | 'node' | 'text' = 'text';
+
+                    // 1. Prioritize URL (Network resources)
+                    if (item.url) {
+                        identifier = item.url;
+                        type = 'url';
+                    }
+                    // 2. Fallback to Node Selector (DOM elements via generic 'node' property or nested 'node' object)
+                    else if (item.node) {
+                        identifier = item.node.selector || item.node.snippet;
+                        type = 'node';
+                    }
+                    // 3. Fallback to protocol-relative URLs sometimes found in text
+                    else if (typeof item.source?.url === 'string') {
+                        identifier = item.source.url;
+                        type = 'url';
+                    }
+
+                    if (!identifier) continue;
+
+                    // Create a composite key (Audit + Identifier)
+                    // We don't strictly need a crypto hash, this string key is sufficient and readable
+                    const key = `${finding.audit_id}|${identifier}`;
+
+                    if (!issueMap.has(key)) {
+                        issueMap.set(key, {
+                            hash: key,
+                            audit_id: finding.audit_id,
+                            title: finding.title,
+                            description: finding.description,
+                            identifier,
+                            identifierType: type,
+                            count: 0,
+                            potentialSavingsBytes: 0,
+                            potentialSavingsMs: 0,
+                            pages: []
+                        });
+                    }
+
+                    const entry = issueMap.get(key)!;
+                    entry.count++;
+
+                    // Sum up potential savings
+                    let itemWastedBytes = 0;
+                    if (typeof item.wastedBytes === 'number') itemWastedBytes = item.wastedBytes;
+                    else if (typeof item.totalBytes === 'number' && !item.wastedBytes) itemWastedBytes = item.totalBytes; // Sometimes total is the savings (e.g. unused JS)
+
+                    let itemWastedMs = 0;
+                    if (typeof item.wastedMs === 'number') itemWastedMs = item.wastedMs;
+
+                    entry.potentialSavingsBytes += itemWastedBytes;
+                    entry.potentialSavingsMs += itemWastedMs;
+
+                    // Keep track of all affected pages, storing both URL and ID for linking
+                    // Format: "ID|URL" to parse later or store as object if possible but interface uses strings for simplicity
+                    // Using JSON string to store object {id, url} in the array
+                    const pageEntry = JSON.stringify({
+                        id: finding.page_id,
+                        url: finding.page_url,
+                        wastedBytes: itemWastedBytes > 0 ? itemWastedBytes : undefined,
+                        wastedMs: itemWastedMs > 0 ? itemWastedMs : undefined
+                    });
+                    if (!entry.pages.includes(pageEntry)) {
+                        entry.pages.push(pageEntry);
+                    }
+                }
+            } catch (e) {
+                // Ignore parse errors for individual rows
+            }
+        }
+
+        // Convert Map to Array and Sort
+        // Sorting priority: Count (frequency) -> Savings
+        return Array.from(issueMap.values())
+            .filter(item => item.count > 1) // Only show repeated issues
+            .sort((a, b) => {
+                if (b.count !== a.count) return b.count - a.count;
+                return b.potentialSavingsBytes - a.potentialSavingsBytes;
+            })
+            .slice(0, 50); // Top 50
+
+    } catch (e) {
+        console.error('Error calculating common performance issues:', e);
         return [];
     }
 }

@@ -6,8 +6,13 @@ export function claimNextJob(
   workerId: string,
   role: WorkerRole,
 ): QueueRow | null {
-  const fromStatus = role === "discovery" ? "pending" : "pending_audit";
-  const toStatus = role === "discovery" ? "processing_discovery" : "processing_audit";
+  // Consolidated Worker: 'audit' role now processes 'pending' jobs directly.
+  // We prioritize 'pending' jobs. 
+  // Note: We might want to clear 'pending_audit' if we are migrating,
+  // but for new runs, everything starts as 'pending'.
+
+  const fromStatus = role === "discovery" ? "pending" : "pending";
+  const toStatus = role === "discovery" ? "processing_discovery" : "processing";
 
   // Grab the highest priority job that matches this role's pending state
   const stmt = db.prepare(`

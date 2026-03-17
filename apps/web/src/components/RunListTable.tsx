@@ -15,6 +15,35 @@ function formatDistanceToNow(date: Date) {
   return "just now";
 }
 
+function formatDuration(start: string, end?: string) {
+  if (!end) return "Running...";
+
+  const ms = new Date(end).getTime() - new Date(start).getTime();
+  if (ms < 1000) return "< 1s";
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const rs = s % 60;
+  if (m < 60) return `${m}m ${rs}s`;
+  const h = Math.floor(m / 60);
+  const rm = m % 60;
+  return `${h}h ${rm}m`;
+}
+
+function formatConfigSummary(config: any) {
+  if (!config) return "Default";
+  const parts = [];
+  if (config.maxDepth !== undefined) parts.push(`Depth: ${config.maxDepth}`);
+  if (config.discovery?.mode) parts.push(`Mode: ${config.discovery.mode}`);
+  if (config.discovery?.mobile) parts.push("Mobile");
+  if (config.sitemap) parts.push("Sitemap");
+  if (config.networkIdleTimeout !== undefined && config.networkIdleTimeout > 0)
+    parts.push(`Wait: ${config.networkIdleTimeout}ms`);
+  if (config.plugins?.length > 0)
+    parts.push(`Plugins: ${config.plugins.join("+")}`);
+  return parts.join(", ") || "Default";
+}
+
 export default function RunListTable({
   runs: initialRuns,
 }: {
@@ -63,6 +92,9 @@ export default function RunListTable({
         <thead className="bg-gray-50">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Action
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Status
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -72,19 +104,37 @@ export default function RunListTable({
               Pages
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Violations
+              A11y Violations
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Duration
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Date
             </th>
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Action
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Config
             </th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {runs.map((run) => (
             <tr key={run.id} className="hover:bg-gray-50 group">
+              <td className="px-6 py-4 text-left text-sm flex gap-3 items-center">
+                <a
+                  href={`/runs/${run.id}`}
+                  className="text-blue-600 hover:text-blue-900 font-medium"
+                >
+                  View Details
+                </a>
+                <button
+                  onClick={(e) => handleDelete(run.id, e)}
+                  className="text-gray-400 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50"
+                  title="Delete Run"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <span
                   className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -112,25 +162,16 @@ export default function RunListTable({
               <td className="px-6 py-4 text-sm text-red-600 font-medium">
                 {run.violation_count}
               </td>
+              <td className="px-6 py-4 text-sm text-gray-500 font-mono">
+                {formatDuration(run.started_at, run.completed_at)}
+              </td>
               <td className="px-6 py-4 text-sm text-gray-500">
                 {run.started_at
                   ? formatDistanceToNow(new Date(run.started_at))
                   : "N/A"}
               </td>
-              <td className="px-6 py-4 text-right text-sm flex justify-end gap-3 items-center">
-                <a
-                  href={`/runs/${run.id}`}
-                  className="text-blue-600 hover:text-blue-900 font-medium"
-                >
-                  View Details
-                </a>
-                <button
-                  onClick={(e) => handleDelete(run.id, e)}
-                  className="text-gray-400 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50"
-                  title="Delete Run"
-                >
-                  <Trash2 size={16} />
-                </button>
+              <td className="px-6 py-4 text-sm text-gray-500 font-mono text-xs whitespace-nowrap">
+                {formatConfigSummary(run.config)}
               </td>
             </tr>
           ))}

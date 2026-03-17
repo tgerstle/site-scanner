@@ -1,14 +1,28 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { loadConfig } from "types";
-import { logEvent, Orchestrator, analyzeRun } from "core";
-import { getDb, initializeSchema, createRun, insertJob } from "db";
+import { ScannerConfig } from "types";
+import { logEvent, Orchestrator, analyzeRun, loadConfig, fetchSitemapUrls, normalizeUrl, setupFastContext, PageClassifier } from "core";
+import { getDb, initializeSchema, createRun, insertJob, stopRun } from "db";
 import * as path from "node:path";
 import * as fs from "node:fs";
 
 const program = new Command();
 
 program.name("awa").description("Adaptive Web Auditor CLI").version("1.0.0");
+
+program
+    .command("flush-logs")
+    .description("Clear the scanner_run.log file")
+    .action(() => {
+        const logPath = path.resolve(process.cwd(), "scanner_run.log");
+        if (fs.existsSync(logPath)) {
+            fs.writeFileSync(logPath, "");
+            console.log("Logs flushed successfully.");
+        } else {
+            console.log("No log file found.");
+        }
+        process.exit(0);
+    });
 
 program
     .command("start")
@@ -18,7 +32,8 @@ program
     .option("-l, --list <urls>", "Comma-separated list of URLs to audit (audit only, no crawl)")
     .option("-d, --depth <number>", "Maximum crawl depth") // Remove default "3" to allow logic below to handle it
     .option("-p, --plugins <plugins...>", "Plugins to run")
-    .action((options) => {
+    .option("--network-timeout <ms>", "Wait time for network idle in ms (default: 5000)")
+    .action(async (options) => { // Updated to async
         try {
             // Determine targets
             const directUrl = options.url ? options.url.trim() : null;
@@ -29,16 +44,15 @@ program
                 throw new Error("No URL or configuration provided. Use --url, --list, or --config.");
             }
 
-            // If using a list or explicit URLs without config file, default depth to 0 (audit only) unless specified
-            // If just -u is provided, we usually crawl, but if -l is provided, we usually just want those pages.
-            // Let's say: if list is present, default depth is 0. If only -u, default is 3.
+            // Defaults: List = depth 0, else 3
             const defaultDepth = options.list ? 0 : 3;
             const depth = options.depth ? parseInt(options.depth, 10) : defaultDepth;
 
             const config = loadConfig(options.config, {
-                siteUrl: targets[0], // Primary URL for run ID/logging
+                siteUrl: targets[0], // Primary URL (important for sitemap base url)
                 maxDepth: depth,
                 plugins: options.plugins,
+                networkIdleTimeout: options.networkTimeout ? parseInt(options.networkTimeout, 10) : undefined
             });
 
             logEvent({
@@ -53,10 +67,50 @@ program
             initializeSchema(db);
 
             const runId = createRun(db, config);
+            const discoveryMode = config.discovery?.mode || "crawl";
 
-            // Insert all targets
-            for (const url of targets) {
-                insertJob(db, { run_id: runId, url, depth: 0, priority: 100 });
+            // --- 1. Sitemap Ingestion ---
+            if (discoveryMode === "sitemap" || discoveryMode === "hybrid") {
+                const sitemapUrl = config.discovery?.sitemapUrl ||
+                    (new URL("/sitemap.xml", config.siteUrl).toString());
+
+                logEvent({ event: "sitemap_fetch", severity: "info", message: `Fetching sitemap: ${sitemapUrl}` });
+
+                try {
+                    const sitemapUrls = await fetchSitemapUrls(sitemapUrl);
+                    logEvent({ event: "sitemap_processed", severity: "info", message: `Found ${sitemapUrls.length} pages in sitemap`, data: { count: sitemapUrls.length } });
+
+                    if (sitemapUrls.length > 0) {
+                        const insertTx = db.transaction((urls: string[]) => {
+                            for (const url of urls) {
+                                // Sitemap URLs are treated as "leaf" nodes (max depth) unless explicitly crawled
+                                // To avoid deep crawling from every sitemap entry.
+                                // But if 'sitemap' only, we just want to audit them.
+                                insertJob(db, { run_id: runId, url, depth: config.maxDepth, priority: 50 });
+                            }
+                        });
+                        insertTx(sitemapUrls);
+                    }
+                } catch (e: any) {
+                    logEvent({ event: "sitemap_error", severity: "error", message: `Failed to process sitemap: ${e.message}` });
+                    // If sitemap fails in sitemap-only mode, we probably should abort or warn?
+                    // Proceeding might be okay if 'hybrid', but bad if 'sitemap'.
+                }
+            }
+
+            // --- 2. Crawl Seeds ---
+            if (discoveryMode === "crawl" || discoveryMode === "hybrid") {
+                // Insert explicit targets as seeds (depth 0)
+                // This triggers the Discovery Worker to crawl them
+                for (const url of targets) {
+                    insertJob(db, { run_id: runId, url, depth: 0, priority: 100 });
+                }
+            } else if (discoveryMode === "sitemap" && targets.length > 0) {
+                // Even in sitemap mode, explicit targets should probably be audited?
+                // Let's treat them as manual overrides
+                for (const url of targets) {
+                    insertJob(db, { run_id: runId, url, depth: config.maxDepth, priority: 100 });
+                }
             }
 
             // Output JSON for programmatic usage
@@ -65,12 +119,16 @@ program
             const orchestrator = new Orchestrator(db);
             orchestrator.startZombieDetection();
 
-            const discoveryWorker = orchestrator.spawnWorker("discovery", `${runId}_disc_1`);
-            const auditWorker = orchestrator.spawnWorker("audit", `${runId}_aud_1`);
+            // Consolidated Worker Mode:
+            // We launch multiple "audit" workers that handle both discovery and auditing.
+            // This replaces the separate Discovery/Audit phases.
+            const auditWorker1 = orchestrator.spawnWorker("audit", `${runId}_aud_1`);
+            const auditWorker2 = orchestrator.spawnWorker("audit", `${runId}_aud_2`);
 
             // Poll for completion
             const checkInterval = setInterval(() => {
-                const pending = (db.prepare("SELECT COUNT(*) as count FROM queue WHERE run_id = ? AND status IN ('pending', 'processing_discovery', 'pending_audit', 'processing_audit')").get(runId) as any).count;
+                // Include 'processing' in the check
+                const pending = (db.prepare("SELECT COUNT(*) as count FROM queue WHERE run_id = ? AND status IN ('pending', 'processing', 'processing_discovery', 'pending_audit', 'processing_audit')").get(runId) as any).count;
 
                 if (pending === 0) {
                     clearInterval(checkInterval);
@@ -97,8 +155,7 @@ program
                     });
 
                     orchestrator.stopZombieDetection();
-                    discoveryWorker.kill();
-                    auditWorker.kill();
+                    orchestrator.killAll();
                     db.close();
                     process.exit(0);
                 }
@@ -108,11 +165,24 @@ program
                 logEvent({
                     event: "run_interrupted",
                     severity: "warn",
-                    message: "Stopping orchestrator...",
+                    message: "Stopping run via SIGINT...",
                 });
                 orchestrator.stopZombieDetection();
-                discoveryWorker.kill();
-                auditWorker.kill();
+                orchestrator.killAll();
+                stopRun(db, runId);
+                db.close();
+                process.exit(0);
+            });
+
+            process.on("SIGTERM", () => {
+                logEvent({
+                    event: "run_terminated",
+                    severity: "warn",
+                    message: "Stopping run via SIGTERM...",
+                });
+                orchestrator.stopZombieDetection();
+                orchestrator.killAll();
+                stopRun(db, runId); // Helper updates status to 'stopped'
                 db.close();
                 process.exit(0);
             });
@@ -403,6 +473,45 @@ program
             console.error("Error exporting run:", e.message);
             process.exit(1);
         }
+    });
+
+program
+    .command("classify")
+    .description("Test page classification for a given URL")
+    .requiredOption("-u, --url <url>", "URL to classify")
+    .option("-c, --config <path>", "Path to config file")
+    .action(async (options) => {
+        try {
+            const config = loadConfig(options.config, { siteUrl: options.url });
+            const classifier = new PageClassifier(config);
+
+            console.log(`Classifying ${options.url}...`);
+            const { browser, context } = await setupFastContext();
+
+            try {
+                const page = await context.newPage();
+                // Use networkidle to ensure JSON-LD and other dynamic content is loaded
+                const response = await page.goto(options.url, { waitUntil: "networkidle", timeout: 60000 });
+
+                const finalUrl = page.url();
+                if (finalUrl !== options.url) {
+                    // console.log(`Redirected to: ${finalUrl}`); // Quiet for JSON output
+                }
+
+                const result = await classifier.classify(finalUrl, page, response);
+                console.log(JSON.stringify(result.types, null, 2));
+
+            } finally {
+                // Ensure browser is closed even if classify throws or network idle times out
+                if (browser) await browser.close();
+            }
+        } catch (error: any) {
+            console.error("Classification failed:", error.message);
+            // Explicitly exit process
+            process.exit(1);
+        }
+        // Success exit
+        process.exit(0);
     });
 
 program.parse(process.argv);

@@ -51,14 +51,14 @@ describe('End-to-End Scan Integration', () => {
         const config = {
             siteUrl: TEST_URL,
             maxDepth: 0,
-            plugins: ['axe', 'lighthouse'],
+            plugins: ['axe', 'lighthouse'], // Test the alias 'axe' for 'axe-core'
         };
 
         // 3. Create Scan Run
         runId = createRun(db, config);
         console.log(`Created test run: ${runId} targeting ${TEST_URL}`);
 
-        // 4. Insert Job & Set to pending_audit
+        // 4. Insert Job & Set to pending (consolidated worker picks up 'pending')
         insertJob(db, {
             run_id: runId,
             url: TEST_URL,
@@ -66,8 +66,8 @@ describe('End-to-End Scan Integration', () => {
             priority: 100,
         });
 
-        // AuditWorker expects jobs to be in 'pending_audit' state (Discovery usually does this transition)
-        db.prepare("UPDATE queue SET status = 'pending_audit' WHERE run_id = ? AND url = ?").run(runId, TEST_URL);
+        // REMOVED: db.prepare("UPDATE queue SET status = 'pending_audit' ...
+        // New consolidated worker picks up 'pending' jobs directly.
 
         // 5. Initialize Worker with Plugins
         // We instantiate the worker directly to avoid spawning logic
@@ -116,6 +116,16 @@ describe('End-to-End Scan Integration', () => {
         // Verify Audit Results (Lighthouse Scores)
         const result = db.prepare('SELECT * FROM results WHERE run_id = ? AND url = ?').get(runId, TEST_URL);
         expect(result).toBeDefined();
+
+        // Check new Cascading Runner Phase 4 fields
+        console.log(`Page Types: ${result.page_types}`);
+        expect(result.page_types).toContain('global');
+        // Redirect URL might be set if trailing slash was added
+        if (result.redirect_url) {
+            expect(result.redirect_url).toContain('https://');
+        } else {
+            expect(result.redirect_url).toBeNull();
+        }
 
         if (result.custom_data) {
             console.log('Extensions Found:', result.custom_data);

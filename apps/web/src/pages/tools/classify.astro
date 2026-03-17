@@ -1,0 +1,172 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="URL Classifier Tool">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-8">
+      <h1 class="text-2xl font-bold text-gray-900">URL Classifier</h1>
+      <p class="mt-2 text-gray-600">Test how the scanner classifies a specific URL without running a full scan.</p>
+    </div>
+
+    <div class="bg-white shadow sm:rounded-lg p-6 max-w-3xl">
+      <form id="classify-form" class="space-y-4">
+        <div>
+          <label for="url" class="block text-sm font-medium text-gray-700">URL to Classify</label>
+          <div class="mt-1 flex rounded-md shadow-sm">
+            <input
+              type="url"
+              name="url"
+              id="url"
+              required
+              class="flex-1 min-w-0 block w-full px-3 py-2 rounded-md border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              placeholder="https://example.com/page"
+            />
+            <button
+              type="submit"
+              class="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Classify
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <div id="result-container" class="mt-8 hidden">
+        <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Results</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Basic Info</h4>
+            <dl class="space-y-2 text-sm">
+              <div class="flex justify-between">
+                <dt class="text-gray-500">URL:</dt>
+                <dd class="font-mono text-gray-900 break-all" id="res-url">-</dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-gray-500">Redirected:</dt>
+                <dd class="font-medium" id="res-redirect">-</dd>
+              </div>
+              <div class="flex justify-between hidden" id="res-redirect-row">
+                <dt class="text-gray-500">Final URL:</dt>
+                <dd class="font-mono text-gray-900 break-all" id="res-final-url">-</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div>
+             <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Classification</h4>
+             <div id="res-types" class="flex flex-wrap gap-2">
+               <!-- Badges injected here -->
+             </div>
+             <p id="res-no-types" class="text-sm text-gray-500 italic hidden">No specific types detected.</p>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Raw JSON</h4>
+          <pre class="bg-gray-50 p-4 rounded-md overflow-auto text-xs font-mono text-gray-800 border" id="res-json"></pre>
+        </div>
+      </div>
+
+      <div id="error-container" class="mt-8 hidden p-4 bg-red-50 text-red-700 rounded-md">
+        <p class="font-bold">Error</p>
+        <p id="error-msg" class="text-sm mt-1"></p>
+      </div>
+
+      <div id="loading-container" class="mt-8 hidden flex justify-center py-8">
+        <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  const form = document.getElementById('classify-form');
+  const resultContainer = document.getElementById('result-container');
+  const errorContainer = document.getElementById('error-container');
+  const loadingContainer = document.getElementById('loading-container');
+  const errorMsg = document.getElementById('error-msg');
+
+  // Result fields
+  const resUrl = document.getElementById('res-url');
+  const resRedirect = document.getElementById('res-redirect');
+  const resRedirectRow = document.getElementById('res-redirect-row');
+  const resFinalUrl = document.getElementById('res-final-url');
+  const resTypes = document.getElementById('res-types');
+  const resNoTypes = document.getElementById('res-no-types');
+  const resJson = document.getElementById('res-json');
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
+    const url = formData.get('url');
+
+    if (!url) return;
+
+    // Reset UI
+    resultContainer?.classList.add('hidden');
+    errorContainer?.classList.add('hidden');
+    loadingContainer?.classList.remove('hidden');
+
+    try {
+      const response = await fetch('/api/classify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      const data = await response.json();
+
+      loadingContainer?.classList.add('hidden');
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to classify URL');
+      }
+
+      // Populate Data
+      if (resUrl) resUrl.textContent = data.url;
+      if (resJson) resJson.textContent = JSON.stringify(data, null, 2);
+
+      // Redirects
+      const isRedirect = data.redirectUrl && data.redirectUrl !== data.url;
+      if (resRedirect) {
+        resRedirect.textContent = isRedirect ? 'Yes' : 'No';
+        resRedirect.className = isRedirect ? 'font-bold text-amber-600' : 'font-medium text-gray-900';
+      }
+      
+      if (isRedirect && resRedirectRow && resFinalUrl) {
+          resRedirectRow.classList.remove('hidden');
+          resFinalUrl.textContent = data.redirectUrl;
+      } else if (resRedirectRow) {
+          resRedirectRow.classList.add('hidden');
+      }
+
+      // Types
+      if (resTypes) resTypes.innerHTML = '';
+      if (data.pageTypes && data.pageTypes.length > 0) {
+        resNoTypes?.classList.add('hidden');
+        data.pageTypes.forEach((type: string) => {
+            const span = document.createElement('span');
+            span.className = 'px-2 py-1 rounded-md text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200';
+            span.textContent = type;
+            resTypes?.appendChild(span);
+        });
+      } else {
+        resNoTypes?.classList.remove('hidden');
+      }
+
+      resultContainer?.classList.remove('hidden');
+
+    } catch (err: any) {
+      loadingContainer?.classList.add('hidden');
+      errorContainer?.classList.remove('hidden');
+      if (errorMsg) errorMsg.textContent = err.message;
+    }
+  });
+</script>

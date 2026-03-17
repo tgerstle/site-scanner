@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getPerformanceFindings } from '../../../../lib/queries';
+import { getPerformanceFindings, getCommonPerformanceIssues } from '../../../../lib/queries';
 
 export const GET: APIRoute = async ({ params, request }) => {
     const { id } = params;
@@ -13,8 +13,9 @@ export const GET: APIRoute = async ({ params, request }) => {
 
     try {
         const findings = getPerformanceFindings(id);
+        const commonIssues = getCommonPerformanceIssues(id);
 
-        return new Response(JSON.stringify(findings), {
+        return new Response(JSON.stringify({ findings, commonIssues }), {
             status: 200,
             headers: {
                 'Content-Type': 'application/json'

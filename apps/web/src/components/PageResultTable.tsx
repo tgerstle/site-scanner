@@ -101,6 +101,9 @@ export default function PageResultTable({
                 Violations{" "}
                 {sortBy === "violation_count" && (isSortedAsc ? "▲" : "▼")}
               </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                Attributes
+              </th>
               <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 bg-gray-50"
                 onClick={() => handleSort("performance_score")}
@@ -150,6 +153,52 @@ export default function PageResultTable({
                   >
                     {page.violation_count}
                   </span>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex flex-col gap-1 items-start">
+                    {page.pageTypes && page.pageTypes.length > 0 && (
+                      <div className="flex gap-1 flex-wrap">
+                        {page.pageTypes.map((t) => (
+                          <span
+                            key={t}
+                            className="px-1.5 py-0.5 rounded text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-100 font-medium"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {page.redirectUrl && (
+                      <div
+                        className="text-xs text-amber-600 flex items-center gap-1 max-w-[200px] truncate"
+                        title={`Redirects to: ${page.redirectUrl}`}
+                      >
+                        <span className="font-bold text-amber-700">➜</span>
+                        <a
+                          href={page.redirectUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:underline text-amber-700"
+                        >
+                          {(() => {
+                            try {
+                              const u = new URL(page.url);
+                              const r = new URL(page.redirectUrl);
+                              if (u.hostname !== r.hostname) {
+                                return r.hostname + r.pathname;
+                              }
+                              return r.pathname + r.search;
+                            } catch {
+                              return page.redirectUrl;
+                            }
+                          })()}
+                        </a>
+                      </div>
+                    )}
+                    {!page.pageTypes?.length && !page.redirectUrl && (
+                      <span className="text-gray-300 text-xs">-</span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   {page.performance_score !== undefined ? (

@@ -15,9 +15,12 @@ export interface AuditResults {
   performance_findings?: any[];
   custom_data?: Record<string, any>;
   screenshot_path?: string;
+  _page_types?: string[];
+  _redirect_url?: string;
+  pluginArgs?: Record<string, any>;
 }
 
 export interface AuditPlugin {
   name: string;
-  run(ctx: AuditContext): Promise<void>;
+  run(ctx: AuditContext, options?: Record<string, any>): Promise<void>;
 }

@@ -13,13 +13,14 @@ This folder contains the specifications for the "Cascading Test Runner" refactor
 
 | Phase    | Description               | Status      | File                                                         |
 | :------- | :------------------------ | :---------- | :----------------------------------------------------------- |
-| **01**   | **Configuration & Types** | Not Started | [01_configuration_types.md](./01_configuration_types.md)     |
-| **02**   | **Classifier Engine**     | Not Started | [02_classifier_logic.md](./02_classifier_logic.md)           |
-| **02.5** | **Sitemap Integration**   | Not Started | [02_5_sitemap_integration.md](./02_5_sitemap_integration.md) |
-| **03**   | **Audit Worker Logic**    | Not Started | [03_audit_worker_refactor.md](./03_audit_worker_refactor.md) |
-| **04**   | **Database & CLI Tools**  | Not Started | [04_database_and_cli.md](./04_database_and_cli.md)           |
-| **05**   | **Testing Strategy**      | Not Started | [05_testing_strategy.md](./05_testing_strategy.md)           |
-| **06**   | **Impact Analysis**       | Completed   | [06_impact_analysis.md](./06_impact_analysis.md)             |
+| **01**   | **Configuration & Types** | Completed   | [01_configuration_types.md](./01_configuration_types.md)     |
+| **02**   | **Classifier Engine**     | Completed   | [02_classifier_logic.md](./02_classifier_logic.md)           |
+| **02.5** | **Sitemap Integration**   | Completed   | [02_5_sitemap_integration.md](./02_5_sitemap_integration.md) |
+| **03**   | **Audit Worker Logic**    | Completed   | [03_audit_worker_refactor.md](./03_audit_worker_refactor.md) |
+| **04**   | **Database & CLI Tools**  | Completed   | [04_database_and_cli.md](./04_database_and_cli.md)           |
+| **05**   | **Testing Strategy**      | Completed   | [05_testing_strategy.md](./05_testing_strategy.md)           |
+| **06**   | **Frontend Integration**  | Not Started | [06_frontend_integration.md](./06_frontend_integration.md)   |
+| **07**   | **Impact Analysis**       | Completed   | [06_impact_analysis.md](./06_impact_analysis.md)             |
 
 ## Core Concept: The "Cascade"
 
@@ -38,7 +39,7 @@ The `AuditWorker` will no longer simply "Run All Plugins". Instead, it follows t
 
 ## Tracking
 
-- [ ] Phase 1: Configuration Schemas Defined
-- [ ] Phase 2: Classifier Logic Implemented & Tested
-- [ ] Phase 3: Audit Worker Refactored
-- [ ] Phase 4: CLI `classify` command & DB Updates
+- [x] Phase 1: Configuration Schemas Defined
+- [x] Phase 2: Classifier Logic Implemented & Tested
+- [x] Phase 3: Audit Worker Refactored
+- [x] Phase 4: CLI `classify` command & DB Updates

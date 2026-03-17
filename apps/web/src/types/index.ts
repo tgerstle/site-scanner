@@ -2,6 +2,7 @@ export interface RunSpecificStats {
     runId: string;
     status: string;
     created_at: string;
+    completed_at?: string; // ISO 8601 string
     url: string; // The primary URL or a label
     totalUrls: number;
     pendingUrls: number;
@@ -19,6 +20,8 @@ export interface QueueItem {
     status: string;
     depth: number;
     timestamp?: string; // ISO 8601 string
+    pageTypes?: string[];
+    redirectUrl?: string;
 }
 
 export interface RecentItem extends QueueItem {
@@ -36,6 +39,7 @@ export interface UrlReport {
 export interface RunSummary {
     id: string;
     started_at: string;
+    completed_at?: string;
     status: string;
     url_count: number;
     violation_count: number;
@@ -55,6 +59,8 @@ export interface PageSummary {
     performance_score?: number;
     accessibility_score?: number;
     best_practices_score?: number;
+    pageTypes?: string[];
+    redirectUrl?: string;
 }
 
 export interface RunDetail extends RunSummary {

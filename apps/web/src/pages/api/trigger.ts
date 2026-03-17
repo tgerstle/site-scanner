@@ -4,6 +4,9 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from 'node:url';
 
+// Define APIRoute type manually if not available globally
+type APIRoute = (context: { request: Request }) => Promise<Response>;
+
 export const POST: APIRoute = async ({ request }) => {
     console.log("[API] Trigger endpoint hit");
     let body;
@@ -13,7 +16,7 @@ export const POST: APIRoute = async ({ request }) => {
     } catch {
         return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400 });
     }
-    const { url, urls, depth: reqDepth, plugins } = body;
+    const { url, urls, depth: reqDepth, plugins, networkIdleTimeout } = body;
 
     if ((!url || typeof url !== "string") && (!urls || !Array.isArray(urls) || urls.length === 0)) {
         return new Response(JSON.stringify({ error: "Invalid URL or URL list provided" }), {
@@ -59,6 +62,10 @@ export const POST: APIRoute = async ({ request }) => {
     // Add optional plugins
     if (plugins && Array.isArray(plugins) && plugins.length > 0) {
         cliArgs.push("-p", ...plugins);
+    }
+
+    if (networkIdleTimeout !== undefined && networkIdleTimeout !== null) {
+        cliArgs.push("--network-timeout", String(networkIdleTimeout));
     }
 
     if (isDev) {

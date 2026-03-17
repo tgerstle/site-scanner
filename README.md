@@ -226,3 +226,27 @@ Then run with:
 ```bash
 npx tsx packages/cli/src/index.ts start -c awaconfig.json
 ```
+
+## Scenario Handling (Interstitials & Modals)
+
+The scanner includes a **Scenario System** to handle popups, modals, and cookie banners that often block accessibility scans.
+
+### How it Works
+
+Before any audit plugin runs, the scanner executes a cleanup script based on the URL.
+
+1.  **Default Behavior**:
+    - Presses the `Escape` key (twice).
+    - Clicks generic "Close", "Dismiss", or "Reject All" buttons.
+    - Handles common CMPs like OneTrust and Cookiebot.
+
+2.  **Proprietary Scenarios**:
+    - For complex sites (like `charlesandcolvard.com`), we run custom JavaScript to force-close specific widgets (e.g., Yotpo) and remove `aria-hidden` attributes from the `<body>` tag.
+
+### Adding a New Scenario
+
+To add custom logic for a new domain:
+
+1.  Create a file in `packages/core/src/scenarios/proprietary/<domain>.ts`.
+2.  Implement the `config` and `run` interface.
+3.  Register it in `packages/core/src/scenarios/index.ts`.

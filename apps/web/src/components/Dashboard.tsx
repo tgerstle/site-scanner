@@ -1,9 +1,57 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import type { DashboardStats, QueueItem, RecentItem } from "../types/index.ts";
 import QueueTable from "./QueueTable";
 import RunTrigger from "./RunTrigger";
 import LogViewer from "./LogViewer";
 import { useDashboard } from "../hooks/useDashboard";
+
+function formatDuration(start: string, end?: string) {
+  const now = end ? new Date(end).getTime() : Date.now();
+  const startTime = new Date(start).getTime();
+  const ms = Math.max(0, now - startTime);
+
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+
+  const rs = s % 60;
+  const rm = m % 60;
+
+  if (h > 0) return `${h}h ${rm}m ${rs}s`;
+  if (m > 0) return `${m}m ${rs}s`;
+  return `${rs}s`;
+}
+
+function RunTimer({
+  start,
+  end,
+  status,
+}: {
+  start: string;
+  end?: string;
+  status: string;
+}) {
+  const [elapsed, setElapsed] = useState("");
+
+  useEffect(() => {
+    const update = () => {
+      const isDone = ["completed", "stopped", "failed"].includes(status);
+      setElapsed(formatDuration(start, isDone ? end : undefined));
+    };
+
+    update();
+    if (!["completed", "stopped", "failed"].includes(status)) {
+      const i = setInterval(update, 1000);
+      return () => clearInterval(i);
+    }
+  }, [start, end, status]);
+
+  return (
+    <span className="font-mono text-gray-500 tabular-nums text-sm bg-gray-50 px-2 rounded border border-gray-100">
+      Duration: {elapsed}
+    </span>
+  );
+}
 
 export default function Dashboard({
   initialStats,
@@ -19,6 +67,24 @@ export default function Dashboard({
     recentUrls: initialRecentUrls,
     queue: initialQueue,
   });
+
+  const handleStopRun = async (runId: string) => {
+    if (!confirm("Are you sure you want to stop this scan?")) return;
+    try {
+      const res = await fetch(`/api/runs/${runId}/stop`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(`Failed to stop run: ${data.message || data.error}`);
+      } else {
+        // Optimistically update UI or just wait for re-fetch
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert("Error stopping run");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -65,6 +131,15 @@ export default function Dashboard({
               >
                 {runStats.status}
               </span>
+              {["running", "pending"].includes(runStats.status) && (
+                <button
+                  onClick={() => handleStopRun(runStats.runId)}
+                  className="text-xs px-2 py-1 rounded border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-colors font-medium ml-2"
+                  title="Force Stop This Scan"
+                >
+                  Stop
+                </button>
+              )}
             </div>
 
             <div className="hidden sm:block w-px h-5 bg-gray-300"></div>
@@ -79,6 +154,13 @@ export default function Dashboard({
                   minute: "2-digit",
                 })}
               </span>
+              <div className="hidden sm:block w-px h-5 bg-gray-300"></div>
+              <RunTimer
+                start={runStats.created_at}
+                end={runStats.completed_at}
+                status={runStats.status}
+              />
+              <div className="hidden sm:block w-px h-5 bg-gray-300"></div>
               <span
                 className="truncate font-medium text-gray-800"
                 title={runStats.url}
@@ -123,7 +205,7 @@ export default function Dashboard({
             </div>
             <div className="bg-white p-6 rounded-lg shadow border border-gray-100">
               <h3 className="text-sm font-medium text-gray-500">
-                Total Violations
+                Total A11y Violations
               </h3>
               <p className="text-3xl font-semibold mt-2 text-red-800">
                 {runStats.totalViolations || 0}

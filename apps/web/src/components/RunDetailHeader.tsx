@@ -12,8 +12,21 @@ export default function RunDetailHeader({ run }: { run: RunDetail }) {
               #{run.id.slice(-6)}
             </span>
           </h1>
-          <p className="text-sm text-gray-500">
-            Started {new Date(run.started_at).toLocaleString()}
+          <p className="text-sm text-gray-500 flex gap-4">
+            <span>Started {new Date(run.started_at).toLocaleString()}</span>
+            {run.completed_at && (
+              <span className="text-gray-400">
+                Duration:{" "}
+                {(() => {
+                  const ms =
+                    new Date(run.completed_at).getTime() -
+                    new Date(run.started_at).getTime();
+                  const s = Math.floor(ms / 1000);
+                  const m = Math.floor(s / 60);
+                  return `${m}m ${s % 60}s`;
+                })()}
+              </span>
+            )}
           </p>
         </div>
         <div className="flex gap-2 items-center">
@@ -65,7 +78,7 @@ export default function RunDetailHeader({ run }: { run: RunDetail }) {
         </div>
         <div className="p-2">
           <p className="text-xs font-medium text-gray-500 uppercase">
-            Total Violations
+            Total A11y Violations
           </p>
           <p className="text-2xl font-bold text-red-600">
             {run.violation_count}

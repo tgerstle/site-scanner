@@ -2,7 +2,7 @@
 
 **Goal:** Persist the classification decision and provide tools for users to debug their configuration.
 
-**Status:** Not Started
+**Status:** Completed
 
 ## 1. Database Schema Updates
 
@@ -72,25 +72,25 @@ When a URL redirects (e.g., `product/abc` -> `product/abc/detail`), we must capt
 **Solution:** Explicit Cleanup Protocol.
 
 1.  **Orchestrator Responsibility:**
-    *   Track all spawned worker objects/PIDs.
-    *   Monitor the `queue` status.
-    *   When `queue` is empty and `active_workers === 0`: Trigger Shutdown.
+    - Track all spawned worker objects/PIDs.
+    - Monitor the `queue` status.
+    - When `queue` is empty and `active_workers === 0`: Trigger Shutdown.
 2.  **Graceful Shutdown Sequence:**
-    *   **Step 1:** Send `SIGTERM` (or custom IPC message `STOP`) to all workers.
-    *   **Step 2:** Await worker exit (with 5s force-kill timeout).
-    *   **Step 3:** Close Database connection (`db.close()`).
-    *   **Step 4:** Flush logs.
-    *   **Step 5:** `process.exit(exitCode)`.
+    - **Step 1:** Send `SIGTERM` (or custom IPC message `STOP`) to all workers.
+    - **Step 2:** Await worker exit (with 5s force-kill timeout).
+    - **Step 3:** Close Database connection (`db.close()`).
+    - **Step 4:** Flush logs.
+    - **Step 5:** `process.exit(exitCode)`.
 3.  **Signal Trapping:**
-    *   Listen for `SIGINT` (Ctrl+C) and `SIGTERM` in the main CLI process.
-    *   Run the same Shutdown Sequence, marking the run as `cancelled` in DB.
+    - Listen for `SIGINT` (Ctrl+C) and `SIGTERM` in the main CLI process.
+    - Run the same Shutdown Sequence, marking the run as `cancelled` in DB.
 
 ## Checkpoints
 
-- [ ] Add `page_types` column to DB schema.
-- [ ] Update `saveAuditResult` to persist types.
-- [ ] Implement `awa classify` command in CLI.
-- [ ] expose `classify` in `packages/cli/src/index.ts`.
+- [x] Add `page_types` column to DB schema.
+- [x] Update `saveAuditResult` to persist types.
+- [x] Implement `awa classify` command in CLI.
+- [x] expose `classify` in `packages/cli/src/index.ts`.
 
 ## Confirmation Tests
 

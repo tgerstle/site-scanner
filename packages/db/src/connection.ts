@@ -57,6 +57,8 @@ export function initializeSchema(db: Database.Database): void {
       a11y_violations TEXT,
       custom_data TEXT,
       screenshot_path TEXT,
+      page_types TEXT,
+      redirect_url TEXT,
       FOREIGN KEY (run_id) REFERENCES runs(id)
     );
 
@@ -102,5 +104,9 @@ export function initializeSchema(db: Database.Database): void {
 
   // 4. Queue updates
   try { db.prepare("ALTER TABLE queue ADD COLUMN duplicate_of INTEGER DEFAULT NULL REFERENCES queue(id)").run(); } catch (e) { }
+
+  // 5. Results updates (Cascading Runner Phase 4)
+  try { db.prepare("ALTER TABLE results ADD COLUMN page_types TEXT").run(); } catch (e) { }
+  try { db.prepare("ALTER TABLE results ADD COLUMN redirect_url TEXT").run(); } catch (e) { }
 }
 

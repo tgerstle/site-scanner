@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import ViolationList from '../../components/ViolationList';
+import PerformanceFindingsList from '../../components/PerformanceFindingsList';
 
 import { getDb, initializeSchema } from 'db';
 import path from 'node:path';
@@ -20,7 +21,7 @@ if (!urlData) {
 }
 
 const resultData = db.prepare('SELECT a11y_violations, custom_data FROM results WHERE run_id = ? AND url = ? ORDER BY timestamp DESC LIMIT 1').get(urlData.run_id, urlData.url) as any || {};
-const performanceFindings = db.prepare('SELECT title, description, score, display_value FROM performance_findings WHERE run_id = ? AND url = ? LIMIT 50').all(urlData.run_id, urlData.url) as any[];
+const performanceFindings = db.prepare('SELECT title, description, score, display_value, details_json FROM performance_findings WHERE run_id = ? AND url = ? LIMIT 50').all(urlData.run_id, urlData.url) as any[];
 
 let violations: any[] = [];
 let lighthouseScores = {
@@ -105,30 +106,7 @@ function getScoreColor(score) {
     {performanceFindings.length > 0 && (
       <div class="mb-8">
         <h2 class="text-xl font-bold text-gray-900 mb-4">Performance Opportunities</h2>
-        <div class="bg-white shadow overflow-hidden sm:rounded-md border border-gray-200">
-          <ul class="divide-y divide-gray-200">
-            {performanceFindings.map((finding) => (
-              <li class="px-4 py-4 sm:px-6 hover:bg-gray-50">
-                <div class="flex items-center justify-between">
-                  <div class="flex-1 min-w-0 pr-4">
-                    <p class="text-sm font-medium text-blue-600 truncate">{finding.title}</p>
-                    <p class="mt-1 flex items-center text-sm text-gray-500">
-                      {finding.description}
-                    </p>
-                  </div>
-                  <div class="ml-4 flex-shrink-0 flex flex-col items-end">
-                    <span class={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getScoreColor(finding.score)}`}>
-                      Score: {Math.round(finding.score * 100)}
-                    </span>
-                    {finding.display_value && (
-                      <span class="mt-1 text-xs text-gray-500">{finding.display_value}</span>
-                    )}
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <PerformanceFindingsList client:load findings={performanceFindings} />
       </div>
     )}
 

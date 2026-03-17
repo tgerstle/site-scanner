@@ -2,7 +2,14 @@
 
 **Goal:** Enhance the Discovery phase to prioritize sitemaps as the "Source of Truth" while retaining the ability to crawl for orphaned pages.
 
-**Status:** Not Started
+**Status:** Completed
+
+## Outcomes
+
+- Implemented `normalizeUrl` utility in `packages/core/src/url-utils.ts`
+- Implemented `fetchSitemapUrls` using `fast-xml-parser` in `packages/core/src/sitemap.ts`
+- Updated `packages/cli/src/index.ts` to support `crawl`, `sitemap`, and `hybrid` discovery modes
+- Integrated sitemap ingestion before starting the orchestrator
 
 ## 1. The Strategy: "Hybrid Discovery"
 
