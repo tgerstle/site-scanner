@@ -9,6 +9,41 @@ export interface AuditContext {
   flags: { hasErrors: boolean };
 }
 
+export interface SeoResult {
+  meta: {
+    title: string | null;
+    description: string | null;
+    canonical: string | null;
+    robots: string | null;
+    viewport: string | null;
+    charset: string | null;
+    generator: string | null;
+  };
+  openGraph: Record<string, string>;
+  twitter: Record<string, string>;
+  jsonLd: Array<Record<string, any>>;
+  headings: Array<{ level: number; text: string }>;
+  images: Array<{ src: string; alt: string; loading?: string }>;
+  validation?: SeoValidationResult; // Added in Phase 2
+}
+
+export interface SeoValidationResult {
+  meta: {
+    status: "pass" | "warn" | "fail";
+    errors: string[];
+    warnings: string[];
+  };
+  schema: {
+    valid: boolean;
+    errors: Array<{
+      path: string | null;
+      message: string;
+      schemaType: string;
+    }>;
+  };
+  score: number;
+}
+
 export interface AuditResults {
   seo_score?: number;
   a11y_violations?: any[];
@@ -17,6 +52,7 @@ export interface AuditResults {
   screenshot_path?: string;
   _page_types?: string[];
   _redirect_url?: string;
+  seo_result?: SeoResult;
   pluginArgs?: Record<string, any>;
 }
 

@@ -1,3 +1,4 @@
+import type { SeoResult } from "types";
 
 export interface RunSpecificStats {
     runId: string;
@@ -74,6 +75,7 @@ export interface PageSummary {
     best_practices_score?: number;
     pageTypes?: string[];
     redirectUrl?: string;
+    seo_result?: SeoResult;
 }
 
 export interface RunDetail extends RunSummary {

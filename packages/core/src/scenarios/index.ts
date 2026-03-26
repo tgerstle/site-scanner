@@ -2,9 +2,9 @@
 // It matches the current URL against available scenarios and executes them before auditing.
 
 import { Page } from "playwright";
-import * as DefaultScenario from "./default";
-import * as CharlesAndColvard from "./proprietary/charlesandcolvard";
-import { ScenarioModule } from "./types";
+import * as DefaultScenario from "./default.js";
+import * as CharlesAndColvard from "./proprietary/charlesandcolvard.js";
+import { ScenarioModule } from "./types.js";
 
 // Define the available scenarios manually here.
 // In the future, this could be dynamic, but explicit imports are safer for bundling.
@@ -29,7 +29,7 @@ export async function runScenario(url: string, page: Page): Promise<string[]> {
     // Find custom match
     let customScenario: ScenarioModule | null = null;
     for (const mod of scenarios) {
-        if (mod.config.patterns.some(pattern => typeof pattern === 'string' ? url.includes(pattern) : pattern.test(url))) {
+        if (mod.config.patterns.some((pattern: string | RegExp) => typeof pattern === 'string' ? url.includes(pattern) : pattern.test(url))) {
             customScenario = mod;
             logs.push(`Matched proprietary scenario: ${mod.config.description || 'Custom'}`);
             break;

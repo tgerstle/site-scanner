@@ -4,18 +4,19 @@
 
 This phase introduces validation logic to analyze the extracted data against Schema.org constraints and best practices. It utilizes `ajv` and `schema-org-json-schemas` to validate structured data. The goal is to flag errors, missing required properties, and inconsistent metadata.
 
-## Objectives
+## Objectives - **PARTIAL**
 
-- [ ] **2.1 Validation Engine**
+- [x] **2.1 Validation Engine**
   - Implement `SeoValidator` class/service.
-- [ ] **2.2 Meta Tag Validation**
+- [x] **2.2 Meta Tag & Content Validation**
   - Title length (30-60 chars).
   - Description length (50-160 chars).
   - Canonical validation (self-referencing logic).
   - Robots validation (index/follow status).
-  - Charset validation (UTF-8).
-- [ ] **2.3 Schema.org Validation**
-  - Load and compile JSON schemas for common types (`Product`, `Article`, `Organization`, etc.).
+  - Headings structure (H1 presence, hierarchy).
+  - Image Alt Text presence (sampling).
+- [ ] **2.3 Schema.org Validation (PENDING)**
+  - Load package `ajv` and `schema-org-json-schemas`.
   - Validate extracted JSON-LD against these schemas.
   - Report errors in a structured format (property path, missing property, invalid type).
 - [ ] **2.4 CLI Command**

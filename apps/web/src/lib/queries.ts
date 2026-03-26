@@ -200,6 +200,7 @@ export function getRunDetails(runId: string): RunDetail | null {
       q.depth,
       COALESCE(SUM(a.count), 0) as violation_count,
       r.seo_score,
+      r.seo_result,
       r.custom_data,
       r.page_types,
       r.redirect_url
@@ -240,23 +241,33 @@ export function getRunDetails(runId: string): RunDetail | null {
         try {
             if (p.custom_data) {
                 const custom = JSON.parse(p.custom_data);
-                page.performance_score = custom.performance_score;
-                page.accessibility_score = custom.accessibility_score;
-                page.best_practices_score = custom.best_practices_score;
+                if (typeof custom === "object" && custom !== null) {
+                    page.performance_score = custom.performance_score;
+                    page.accessibility_score = custom.accessibility_score;
+                    page.best_practices_score = custom.best_practices_score;
+                }
             }
         } catch (e) {
             // ignore JSON parse error
         }
 
+        // Parse seo_result
+        try {
+            if (p.seo_result) {
+                page.seo_result = JSON.parse(p.seo_result);
+            }
+        } catch (e) {
+            // ignore
+        }
+
         return page;
     });
 
-    const completedPagesWithScores = effectivePages.filter((p: any) => p.status === 'completed' && p.performance_score !== undefined);
+    const completedPagesWithScores = effectivePages.filter((p: any) => p.status === 'completed' && (p.performance_score !== undefined || p.seo_score !== undefined));
 
     const avg = (key: string) => {
-        if (completedPagesWithScores.length === 0) return undefined;
         // Ensure values are numbers
-        const valid = completedPagesWithScores.filter((p: any) => typeof p[key] === 'number');
+        const valid = effectivePages.filter((p: any) => typeof p[key] === 'number');
         if (valid.length === 0) return undefined;
         const sum = valid.reduce((acc: number, p: any) => acc + p[key], 0);
         return sum / valid.length;
@@ -293,10 +304,16 @@ export function getPageDetails(runId: string, url: string) {
         custom_data = result.custom_data ? JSON.parse(result.custom_data) : {};
     } catch (e) { }
 
+    let seo_result = null;
+    try {
+        seo_result = result.seo_result ? JSON.parse(result.seo_result) : null;
+    } catch (e) { }
+
     return {
         ...result,
         a11y_violations: result.a11y_violations ? JSON.parse(result.a11y_violations) : [],
-        custom_data
+        custom_data,
+        seo_result
     };
 }
 

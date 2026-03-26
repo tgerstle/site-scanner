@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { runScenario } from './index';
+import { runScenario } from './index.js';
 import { Page } from 'playwright';
 
 // --- Mocks ---
@@ -55,7 +55,7 @@ describe('Scenario System', () => {
             const logs = await runScenario('https://www.charlesandcolvard.com/products/ring', mockPage);
 
             // Should log match
-            expect(logs.some(l => l.includes('Matched proprietary scenario'))).toBe(true);
+            expect(logs.some((l: string) => l.includes('Matched proprietary scenario'))).toBe(true);
             // Should log running proprietary
             expect(logs).toContain('Running Proprietary scenario logic...');
 
@@ -124,7 +124,7 @@ describe('Scenario System', () => {
 
             const logs = await runScenario('https://example.com', mockPage);
 
-            expect(logs.some(l => l.includes('[WARN] Page body still has suspicious classes'))).toBe(true);
+            expect(logs.some((l: string) => l.includes('[WARN] Page body still has suspicious classes'))).toBe(true);
         });
     });
 

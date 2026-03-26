@@ -17,7 +17,8 @@ export function getDb(dbPath: string): Database.Database {
 
 export function initializeSchema(db: Database.Database): void {
   // 1. Create base tables
-  db.exec(`
+  try {
+    db.exec(`
     CREATE TABLE IF NOT EXISTS runs (
       id TEXT PRIMARY KEY,
       started_at TEXT NOT NULL,
@@ -27,6 +28,7 @@ export function initializeSchema(db: Database.Database): void {
       status TEXT DEFAULT 'running'
     );
   `);
+  } catch (e) { console.error("Error creating base tables", e); throw e; }
 
   // 2. Apply migrations for existing databases (idempotent)
   try { db.prepare("ALTER TABLE runs ADD COLUMN config_json TEXT").run(); } catch (e) { }
@@ -35,7 +37,8 @@ export function initializeSchema(db: Database.Database): void {
   try { db.prepare("ALTER TABLE runs ADD COLUMN completed_at TEXT").run(); } catch (e) { }
 
   // 3. Create remaining tables
-  db.exec(`
+  try {
+    db.exec(`
     CREATE TABLE IF NOT EXISTS queue (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       run_id TEXT NOT NULL,
@@ -59,9 +62,17 @@ export function initializeSchema(db: Database.Database): void {
       screenshot_path TEXT,
       page_types TEXT,
       redirect_url TEXT,
+      seo_result TEXT,
       FOREIGN KEY (run_id) REFERENCES runs(id)
     );
+  `);
+  } catch (e) { console.error("Error creating queue/results tables", e); throw e; }
 
+  // Apply migrations for results table
+  try { db.prepare("ALTER TABLE results ADD COLUMN seo_result TEXT").run(); } catch (e) { }
+
+  try {
+    db.exec(`
     CREATE TABLE IF NOT EXISTS a11y_findings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       run_id TEXT NOT NULL,
@@ -101,6 +112,7 @@ export function initializeSchema(db: Database.Database): void {
       FOREIGN KEY (run_id) REFERENCES runs(id)
     );
   `);
+  } catch (e) { console.error("Error creating findings tables", e); throw e; }
 
   // 4. Queue updates
   try { db.prepare("ALTER TABLE queue ADD COLUMN duplicate_of INTEGER DEFAULT NULL REFERENCES queue(id)").run(); } catch (e) { }

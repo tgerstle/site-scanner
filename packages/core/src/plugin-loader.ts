@@ -21,6 +21,9 @@ export async function loadPlugins(pluginNames: string[]): Promise<AuditPlugin[]>
       } else if (name === "custom-extractor") {
         const { CustomExtractorPlugin } = await import("plugins/dist/custom-extractor.js");
         plugins.push(CustomExtractorPlugin);
+      } else if (name === "seo-metadata") {
+        const { SeoMetadataPlugin } = await import("plugins/dist/seo-metadata.js");
+        plugins.push(SeoMetadataPlugin);
       } else {
         console.warn(`Unknown plugin: ${name}`);
       }

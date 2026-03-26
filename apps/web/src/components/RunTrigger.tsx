@@ -6,7 +6,11 @@ export default function RunTrigger() {
   const [urlList, setUrlList] = useState("");
   const [depth, setDepth] = useState<number | "">("");
   const [networkWait, setNetworkWait] = useState<number>(5000);
-  const [plugins, setPlugins] = useState<string[]>(["axe", "lighthouse"]);
+  const [plugins, setPlugins] = useState<string[]>([
+    "axe",
+    "lighthouse",
+    "seo-metadata",
+  ]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -161,7 +165,7 @@ export default function RunTrigger() {
                 Plugins:
               </label>
               <div className="flex gap-4">
-                {["axe", "lighthouse"].map((p) => (
+                {["axe", "lighthouse", "seo-metadata"].map((p) => (
                   <label
                     key={p}
                     className="flex items-center gap-1 cursor-pointer select-none"

@@ -1,6 +1,7 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
 import ViolationViewer from '../../../components/ViolationViewer';
+import SeoDetailsViewer from '../../../components/SeoDetailsViewer';
 import { getPageDetails } from '../../../lib/queries';
 
 const { id } = Astro.params;
@@ -56,13 +57,19 @@ const violations = details?.a11y_violations || [];
           <div class="p-4 border rounded-lg text-center bg-gray-50">
             <div class="text-sm font-medium text-gray-500 uppercase tracking-wide">SEO</div>
             <div class={`text-3xl font-bold mt-2 ${
-              (details.seo_score || 0) >= 0.9 ? 'text-green-600' :
-              (details.seo_score || 0) >= 0.5 ? 'text-yellow-600' : 'text-red-600'
+              ((details.seo_score > 1 ? details.seo_score / 100 : details.seo_score) || 0) >= 0.9 ? 'text-green-600' :
+              ((details.seo_score > 1 ? details.seo_score / 100 : details.seo_score) || 0) >= 0.5 ? 'text-yellow-600' : 'text-red-600'
             }`}>
-              {Math.round((details.seo_score || 0) * 100)}
+              {Math.round(((details.seo_score > 1 ? details.seo_score / 100 : details.seo_score) || 0) * 100)}
             </div>
           </div>
         </div>
+      </div>
+    )}
+
+    {details?.seo_result && (
+      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+        <SeoDetailsViewer client:load seoResult={details.seo_result} url={url} />
       </div>
     )}
 

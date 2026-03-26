@@ -109,13 +109,18 @@ export default function RunDetailHeader({ run }: { run: RunDetail }) {
               { label: "SEO", value: run.avg_seo_score },
             ].map((score) => {
               const hasValue = score.value !== undefined;
+              const normalizedValue = hasValue
+                ? score.value! > 1
+                  ? score.value! / 100
+                  : score.value!
+                : 0;
               const displayValue = hasValue
-                ? Math.round(score.value! * 100)
+                ? Math.round(normalizedValue * 100)
                 : "-";
               let colorClass = "text-gray-400";
               if (hasValue) {
-                if (score.value! >= 0.9) colorClass = "text-green-600";
-                else if (score.value! >= 0.5) colorClass = "text-yellow-600";
+                if (normalizedValue >= 0.9) colorClass = "text-green-600";
+                else if (normalizedValue >= 0.5) colorClass = "text-yellow-600";
                 else colorClass = "text-red-600";
               }
 
@@ -141,11 +146,11 @@ export default function RunDetailHeader({ run }: { run: RunDetail }) {
                   <div
                     className="absolute bottom-0 left-0 h-1 bg-current opacity-20 w-full"
                     style={{
-                      width: hasValue ? `${score.value! * 100}%` : "0%",
+                      width: hasValue ? `${normalizedValue * 100}%` : "0%",
                       backgroundColor: hasValue
-                        ? score.value! >= 0.9
+                        ? normalizedValue >= 0.9
                           ? "#16a34a"
-                          : score.value! >= 0.5
+                          : normalizedValue >= 0.5
                             ? "#ca8a04"
                             : "#dc2626"
                         : "transparent",

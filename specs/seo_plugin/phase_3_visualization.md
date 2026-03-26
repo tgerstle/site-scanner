@@ -4,17 +4,18 @@
 
 This phase builds the capacity to visualize SEO data effectively. While the primary deliverable is a dashboard component, this specification defines the **CLI command** and backend data structure needed to support those visuals. The goal is to provide previews (Google SERP, LinkedIn/FB Cards) without needing a full browser rendering engine in the terminal.
 
-## Objectives
+## Objectives - **PARTIAL**
 
-- [ ] **3.1 Social Preview Logic**
-  - Create `SeoPreviewBuilder` service.
+- [x] **3.1 Social Preview Logic**
+  - Create `SeoPreviewBuilder` service (Implemented in `lib/seo-preview.ts`).
   - Generates preview objects for React components to consume.
-- [ ] **3.2 CLI Preview Output**
+- [ ] **3.2 CLI Preview Output (Lower Priority)**
   - Implement `seo:preview` CLI command.
   - Output ASCII or structured JSON representation of social cards.
-- [ ] **3.3 React Components**
+- [x] **3.3 React Components**
   - `SeoSerpPreview.tsx`: Simulates Google search result.
   - `SeoSocialPreview.tsx`: Simulates Facebook/Twitter cards.
+  - `SeoDetailsViewer.tsx`: Full inspection view including Headings and JSON-LD.
 
 ## Technical Implementation
 

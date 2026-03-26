@@ -14,76 +14,35 @@ This document outlines the phased implementation strategy for the SEO and Schema
 
 **Goal**: Update the core scanner to collect raw SEO data without processing it yet.
 
-### 1. Database Schema Updates
-
-- Status: **Pending**
-- **Task**: Add `seo_result` JSON column to `results` table (or new `seo_audits` table).
-  - Proposed Structure: `meta_tags` (Key-Value), `open_graph` (Key-Value), `json_ld` (Array of objects), `linked_data_errors` (Array).
-
-### 2. Plugin Implementation (`SEOMetadataPlugin`)
-
-- **Platform**: `packages/plugins/src/seo-metadata.ts`
-- **Tools**:
-  - **Playwright**: Use existing browser context to execute extraction scripts.
-  - **Cheerio** (Optional): If static HTML parsing is preferred for speed, but Playwright handles dynamic JS injection best.
-- **Extraction Logic**:
-  - **Standard Tags**: Title, Description, Canonical, Robots, Viewport, Charset, Headers (H1-H6 structure).
-  - **Social Tags**: Open Graph (`og:*`), Twitter Cards (`twitter:*`).
-  - **Structured Data**: Find all `<script type="application/ld+json">`, parse content, catch syntax errors.
+- [x] **1. Database Schema Updates**
+  - **Task**: Add `seo_result` JSON column to `results` table.
+- [x] **2. Plugin Implementation (`SEOMetadataPlugin`)**
+  - **Platform**: `packages/plugins/src/seo-metadata.ts` - Implemented.
+  - **Extraction Logic**: Standard Tags, OG/Twitter Tags, JSON-LD, Headings, Images.
 
 ## Phase 2: Validation & Analysis
 
 **Goal**: Check the integrity and quality of the extracted data.
 
-### 1. Meta Tag Validation
-
-- **Tools**: Custom logic (lightweight).
-- **Checks**:
-  - Title Length (30-60 chars).
-  - Description Length (50-160 chars).
-  - Canonical Tag: Present? Self-referencing? Matches current URL?
-  - Robots Tag: Blocks indexing? Blocks following?
-  - Viewport: Mobile-friendly config?
-
-### 2. Schema.org Validation
-
-- **Tools**:
-  - **`ajv`**: JSON Schema validator (High performance, standard).
-  - **`schema-org-json-schemas`**: Provides pre-generated JSON schemas for Schema.org types.
-- **Logic**:
-  - Validate extracted JSON-LD against Schema.org constraints (e.g., specific required fields for `Product`, `Article`, `BreadcrumbList`).
-  - Flag "Recommended" fields missing (Google Rich Result enhancements).
-  - Detect conflicting or duplicate schema definitions.
+- [x] **1. Meta Tag Validation**
+  - **Tools**: `SeoValidator` class (basic logic).
+  - **Checks**: Title/Desc length, Canonical, Robots, Image Alt text.
+- [ ] **2. Schema.org Validation**
+  - **Tools**: `ajv` + `schema-org-json-schemas` (Pending Integration).
+  - **Logic**: Validate extracted JSON-LD against official schemas.
+  - **Current Status**: Basic presence check implemented; full schema validation pending.
 
 ## Phase 3: Visualization (UI/UX)
 
-**Goal**: Show the user what their page looks like on the web.
+**Goal**: Show the user what their page looks like on the web and inspect raw data.
 
-### 1. Social Previews (The "Share" View)
-
-- **Component**: `SeoSocialPreview.tsx`
-- **Features**:
-  - **Facebook/OpenGraph**: Render card with `og:image`, `og:title`, `og:description`.
-  - **Twitter Card**: Render Summary/Large Image card.
-  - **LinkedIn**: Standard link preview.
-  - **Visual Feedback**: Highlight text truncation or missing images directly in the preview.
-
-### 2. Google SERP Preview
-
-- **Component**: `SeoSerpPreview.tsx`
-- **Features**:
-  - Desktop & Mobile view toggles.
-  - Title/Desc truncation logic.
-  - Bold keywords simulation (optional).
-  - Date snippet simulation (if `article:published_time` present).
-
-### 3. Schema Inspector
-
-- **Component**: `SchemaViewer.tsx`
-- **Features**:
-  - Interactive Tree View of the JSON-LD data.
-  - Syntax Highlighting.
-  - Inline error/warning badges for validation issues found in Phase 2.
+- [x] **1. Social Previews (The "Share" View)**
+  - **Component**: `SeoSocialPreview.tsx` - Completed.
+- [x] **2. Google SERP Preview**
+  - **Component**: `SeoSerpPreview.tsx` - Completed.
+- [x] **3. Data Inspector**
+  - **Component**: `SeoDetailsViewer.tsx` - Completed.
+  - **Features**: Headings structure list, JSON-LD raw viewer, Validation summary.
 
 ## Phase 4: Opportunities & Heuristics
 

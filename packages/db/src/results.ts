@@ -11,8 +11,8 @@ export function saveAuditResult(db: Database, payload: SaveResultPayload) {
   const { run_id, url, results } = payload;
 
   const insertResult = db.prepare(`
-    INSERT INTO results (run_id, url, timestamp, seo_score, a11y_violations, custom_data, screenshot_path, page_types, redirect_url)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO results (run_id, url, timestamp, seo_score, a11y_violations, custom_data, screenshot_path, page_types, redirect_url, seo_result)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const insertA11y = db.prepare(`
@@ -37,6 +37,7 @@ export function saveAuditResult(db: Database, payload: SaveResultPayload) {
       results.screenshot_path ?? null,
       results._page_types ? JSON.stringify(results._page_types) : null,
       results._redirect_url ?? null,
+      results.seo_result ? JSON.stringify(results.seo_result) : null,
     );
 
     // 2. Insert individual A11y findings

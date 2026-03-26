@@ -4,17 +4,17 @@
 
 This phase focuses on extending the `core` scanning capabilities to reliably extract SEO-related metadata from pages during the crawl. It introduces a dedicated `SEOMetadataPlugin` that runs within the existing Playwright context. The goal is to capture raw data without judgment (validation happens in Phase 2).
 
-## Objectives
+## Objectives - **COMPLETE**
 
-- [ ] **1.1 Database Schema Update**
+- [x] **1.1 Database Schema Update**
   - Add `seo_result` column (JSON) to the `results` table.
-- [ ] **1.2 Plugin Architecture**
+- [x] **1.2 Plugin Architecture**
   - Create `packages/plugins/src/seo-metadata.ts`.
   - Register the plugin in `packages/core`.
-- [ ] **1.3 UI Integration**
+- [x] **1.3 UI Integration**
   - Update `RunTrigger.tsx` to include `seo-metadata` in the available plugins list.
   - Ensure API endpoint (`trigger.ts`) parses and passes the `plugin` array correctly.
-- [ ] **1.4 Robust Extraction Logic**
+- [x] **1.4 Robust Extraction Logic**
   - Extract Standard Meta Tags (`title`, `description`, `robots`, `canonical`, `viewport`, `charset`).
   - Extract OpenGraph Tags (`og:*`).
   - Extract Twitter Card Tags (`twitter:*`).
