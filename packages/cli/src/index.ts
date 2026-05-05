@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { ScannerConfig } from "types";
-import { logEvent, Orchestrator, analyzeRun, loadConfig, fetchSitemapUrls, normalizeUrl, setupFastContext, PageClassifier } from "core";
+import { logEvent, Orchestrator, analyzeRun, loadConfig, fetchSitemapUrls, normalizeUrl, setupFastContext, PageClassifier, flattenA11y, flattenPerformance, flattenSeo, generateGlobalRollup, generateCsvZipBuffer, generateXlsxBuffer } from "core";
 import { getDb, initializeSchema, createRun, insertJob, stopRun } from "db";
 import * as path from "node:path";
 import * as fs from "node:fs";
@@ -393,11 +393,11 @@ program
 
 program
     .command("export")
-    .description("Export audit results to JSON or CSV")
+    .description("Export audit results to XLSX or CSV (ZIP)")
     .requiredOption("--run-id <id>", "The Run ID to export")
-    .option("--format <format>", "Export format (json or csv)", "json")
-    .option("--output <file>", "Output file path (defaults to stdout if not specified)")
-    .action((options) => {
+    .option("--format <format>", "Export format: xlsx or csv", "xlsx")
+    .option("--output <file>", "Output file path")
+    .action(async (options) => {
         try {
             const dbPath = process.env.AWA_DB_PATH || path.resolve(process.cwd(), "data/awa.sqlite");
             if (!fs.existsSync(dbPath)) {
@@ -412,60 +412,47 @@ program
                 process.exit(1);
             }
 
-            // Replicate query logic from web app
-            const pages = db.prepare(`
-                SELECT 
-                    q.url, 
-                    q.status, 
-                    q.depth,
-                    COALESCE(SUM(a.count), 0) as violation_count
-                FROM queue q
-                LEFT JOIN a11y_findings a ON q.url = a.url AND q.run_id = a.run_id
-                WHERE q.run_id = ?
-                GROUP BY q.id
-                ORDER BY violation_count DESC
-            `).all(options.runId);
+            console.log(`Generating export datasets for run ${options.runId}...`);
 
-            // Map statuses if stopped
-            const effectivePages = pages.map((p: any) => {
-                if (run.status === 'stopped' && ['pending', 'processing', 'pending_audit'].includes(p.status)) {
-                    return { ...p, status: 'stopped' };
-                }
-                return p;
-            });
+            const a11yData = flattenA11y(db, options.runId);
+            const performanceData = flattenPerformance(db, options.runId);
+            const seoData = flattenSeo(db, options.runId);
+            const globalRollup = generateGlobalRollup(a11yData, performanceData, seoData);
 
-            const totalViolations = effectivePages.reduce((acc: number, p: any) => acc + p.violation_count, 0);
-
-            const runDetail = {
-                id: run.id,
-                started_at: run.started_at,
-                status: run.status,
-                config: run.config_json ? JSON.parse(run.config_json) : {},
-                url_count: effectivePages.length,
-                violation_count: totalViolations,
-                pages: effectivePages
+            const datasets = {
+                global: globalRollup,
+                a11y: a11yData,
+                performance: performanceData,
+                seo: seoData
             };
 
-            let outputContent = "";
+            let buffer: Buffer | undefined;
+            const formatStr = options.format.toLowerCase();
+            let defaultFileName = "";
+            let generatedContent = "";
 
-            if (options.format.toLowerCase() === 'csv') {
-                const headers = ['URL', 'Status', 'Depth', 'Violations'];
-                const rows = runDetail.pages.map((page: any) => [
-                    `"${page.url}"`,
-                    page.status,
-                    page.depth,
-                    page.violation_count
-                ]);
-                outputContent = [headers.join(','), ...rows.map((row: any[]) => row.join(','))].join('\n');
+            if (formatStr === 'csv') {
+                console.log('Generating CSV Zip buffer...');
+                buffer = await generateCsvZipBuffer(datasets);
+                defaultFileName = `scanner-export-${options.runId}.zip`;
+            } else if (formatStr === 'json') {
+                // legacy json fallback
+                generatedContent = JSON.stringify(datasets, null, 2);
+                defaultFileName = `scanner-export-${options.runId}.json`;
             } else {
-                outputContent = JSON.stringify(runDetail, null, 2);
+                console.log('Generating XLSX buffer...');
+                buffer = await generateXlsxBuffer(datasets);
+                defaultFileName = `scanner-export-${options.runId}.xlsx`;
             }
 
-            if (options.output) {
-                fs.writeFileSync(options.output, outputContent);
-                console.log(`Exported run ${options.runId} to ${options.output}`);
-            } else {
-                console.log(outputContent);
+            const outputFile = options.output || defaultFileName;
+
+            if (formatStr === 'json') {
+                if (options.output) fs.writeFileSync(outputFile, generatedContent);
+                else console.log(generatedContent);
+            } else if (buffer) {
+                fs.writeFileSync(outputFile, buffer);
+                console.log(`Exported run ${options.runId} successfully to ${outputFile}`);
             }
 
             db.close();

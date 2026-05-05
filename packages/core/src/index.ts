@@ -8,3 +8,5 @@ export * from "./url-utils.js";
 export * from "./sitemap.js";
 export * from "./discovery.js";
 export * from "./plugin-resolver.js";
+export * from "./normalization.js";
+export * from "./export-generator.js";

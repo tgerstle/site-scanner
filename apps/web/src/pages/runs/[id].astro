@@ -5,6 +5,7 @@ import PageResultTable from '../../components/PageResultTable';
 import PerformanceInsights from '../../components/PerformanceInsights';
 import AccessibilityInsights from '../../components/AccessibilityInsights';
 import RunWarnings from '../../components/RunWarnings';
+import { ExportTrigger } from '../../components/ExportTrigger';
 import { getRunDetails, getRunAlerts } from '../../lib/queries';
 
 const { id } = Astro.params;
@@ -21,10 +22,11 @@ if (!run) {
 
 <Layout title={`Run ${id}`}>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="mb-6">
+    <div class="mb-6 flex justify-between items-center">
       <a href="/runs" class="text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium">
         &larr; Back to History
       </a>
+      <ExportTrigger client:load runId={run.id} />
     </div>
 
     <RunDetailHeader run={run} />

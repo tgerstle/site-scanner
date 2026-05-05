@@ -1,51 +1,86 @@
-
 import type { APIRoute } from 'astro';
-import { getRunDetails } from '../../../../lib/queries';
+import { getDb } from 'db';
+import * as path from 'node:path';
+import {
+    flattenA11y,
+    flattenPerformance,
+    flattenSeo,
+    generateGlobalRollup,
+    generateCsvZipBuffer,
+    generateXlsxBuffer
+} from 'core';
 
 export const GET: APIRoute = async ({ params, request }) => {
     const { id } = params;
+
     if (!id) {
-        return new Response(JSON.stringify({ error: 'Run ID missing' }), { status: 400 });
+        return new Response(JSON.stringify({ error: 'Run ID is required.' }), { status: 400 });
     }
 
     const url = new URL(request.url);
-    const format = url.searchParams.get('format') || 'json';
+    const format = url.searchParams.get('format') || 'xlsx';
 
-    const run = getRunDetails(id);
-    if (!run) {
-        return new Response(JSON.stringify({ error: 'Run not found' }), { status: 404 });
-    }
+    try {
+        const dbPath = process.env.AWA_DB_PATH || path.resolve(process.cwd(), "../../data/awa.sqlite");
+        const db = getDb(dbPath);
 
-    if (format === 'csv') {
-        // CSV Export
-        const headers = ['URL', 'Status', 'Depth', 'Violations'];
-        const rows = run.pages.map(page => [
-            `"${page.url}"`, // Quote URL
-            page.status,
-            page.depth,
-            page.violation_count
-        ]);
+        const run = db.prepare("SELECT * FROM runs WHERE id = ?").get(id) as any;
+        if (!run) {
+            db.close();
+            return new Response(JSON.stringify({ error: `Run ID ${id} not found.` }), { status: 404 });
+        }
 
-        // Add Summary Row at top? Usually CSVs are flat.
-        // Let's just do page list for CSV.
-        const csvContent = [
-            headers.join(','),
-            ...rows.map(row => row.join(','))
-        ].join('\n');
+        const a11yData = flattenA11y(db, id);
+        const performanceData = flattenPerformance(db, id);
+        const seoData = flattenSeo(db, id);
+        const globalRollup = generateGlobalRollup(a11yData, performanceData, seoData);
 
-        return new Response(csvContent, {
+        db.close();
+
+        const datasets = {
+            global: globalRollup,
+            a11y: a11yData,
+            performance: performanceData,
+            seo: seoData
+        };
+
+        let buffer: Buffer | undefined;
+        let contentType = '';
+        let fileName = '';
+
+        if (format === 'csv') {
+            buffer = await generateCsvZipBuffer(datasets);
+            contentType = 'application/zip';
+            fileName = `scanner-export-${id}.zip`;
+        } else if (format === 'json') {
+            return new Response(JSON.stringify(datasets, null, 2), {
+                status: 200,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Disposition': `attachment; filename="scanner-export-${id}.json"`
+                }
+            });
+        } else {
+            buffer = await generateXlsxBuffer(datasets);
+            // fallback content type mapping
+            contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+            fileName = `scanner-export-${id}.xlsx`;
+        }
+
+        if (!buffer) {
+            return new Response(JSON.stringify({ error: 'Failed to generate export file.' }), { status: 500 });
+        }
+
+        return new Response(buffer, {
+            status: 200,
             headers: {
-                'Content-Type': 'text/csv',
-                'Content-Disposition': `attachment; filename="wa_audit_${id}.csv"`,
-            },
+                'Content-Type': contentType,
+                'Content-Disposition': `attachment; filename="${fileName}"`
+            }
         });
-    }
 
-    // JSON Export (Default)
-    return new Response(JSON.stringify(run, null, 2), {
-        headers: {
-            'Content-Type': 'application/json',
-            'Content-Disposition': `attachment; filename="wa_audit_${id}.json"`,
-        },
-    });
+    } catch (error: any) {
+        console.error("Export API Error:", error);
+        return new Response(JSON.stringify({ error: error.message || 'Internal Server Error' }), { status: 500 });
+    }
 };
