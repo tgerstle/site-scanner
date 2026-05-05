@@ -9,10 +9,10 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/node": "^8.2.3",
-    "@astrojs/react": "^3.0.10",
-    "@astrojs/tailwind": "^5.1.0",
-    "astro": "^4.5.16",
+    "@astrojs/node": "^10.0.6",
+    "@astrojs/react": "^5.0.4",
+    "@astrojs/tailwind": "^6.0.2",
+    "astro": "^6.2.2",
     "core": "*",
     "db": "*",
     "lucide-react": "^0.364.0",
