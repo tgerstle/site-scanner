@@ -1,6 +1,6 @@
-# Adaptive Web Auditor (AWA) CLI
+# Adaptive Web Auditor (AWA)
 
-This repository contains the Adaptive Web Auditor, a tool for scanning websites for accessibility and performance issues. This guide explains how to use the Command Line Interface (CLI) to run audits.
+This repository contains the Adaptive Web Auditor, a full-stack tool for scanning websites for accessibility, performance, and SEO issues. It includes both a **Web Dashboard** for visualizing results and a **Command Line Interface (CLI)** for headlessly orchestrating audits.
 
 ## Prerequisites
 
@@ -13,23 +13,48 @@ This repository contains the Adaptive Web Auditor, a tool for scanning websites 
 
     ```bash
     git clone <repository-url>
-    cd scanner
+    cd site-scanner
     ```
 
-2.  Install dependencies:
+2.  Install dependencies (this handles all workspaces/packages automatically):
 
     ```bash
     npm install
     ```
 
-3.  Build the packages:
+3.  Build the workspace packages:
     ```bash
     npm run build
     ```
 
-## Usage
+> **Note:** The SQLite database is lazily initialized. The first time you start the web server or run a scan, a `data/awa.sqlite` database will be automatically created with all required tables.
 
-You can run the CLI in two ways: using `tsx` (recommended for development) or by running the built JavaScript files.
+## Web Dashboard
+
+The Web Dashboard is an Astro + React frontend that lets you view scan logs, audit violations, and trigger exports.
+
+### Run in Development Mode
+
+To start the dashboard with hot-reloading:
+
+```bash
+npm run dev
+```
+
+It will be available at `http://localhost:4321`.
+
+### Run in Production (Preview) Mode
+
+To simulate a fast production build:
+
+```bash
+npm run build   # Make sure it's built first
+npm run start
+```
+
+## CLI Usage
+
+You can run the CLI orchestrator to trigger scans and exports manually.
 
 ### 1. Development Mode (using `tsx`)
 
