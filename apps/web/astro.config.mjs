@@ -9,4 +9,9 @@ export default defineConfig({
     mode: "standalone",
   }),
   integrations: [react(), tailwind()],
+  vite: {
+    ssr: {
+      external: ["better-sqlite3"],
+    },
+  },
 });

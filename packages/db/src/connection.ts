@@ -12,6 +12,17 @@ export function getDb(dbPath: string): Database.Database {
   const db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
   db.pragma("synchronous = NORMAL");
+
+  // Lazy Initialization: Check if our base 'runs' table exists
+  const isInitialized = db
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='runs'",
+    )
+    .get();
+  if (!isInitialized) {
+    initializeSchema(db);
+  }
+
   return db;
 }
 
@@ -28,13 +39,26 @@ export function initializeSchema(db: Database.Database): void {
       status TEXT DEFAULT 'running'
     );
   `);
-  } catch (e) { console.error("Error creating base tables", e); throw e; }
+  } catch (e) {
+    console.error("Error creating base tables", e);
+    throw e;
+  }
 
   // 2. Apply migrations for existing databases (idempotent)
-  try { db.prepare("ALTER TABLE runs ADD COLUMN config_json TEXT").run(); } catch (e) { }
-  try { db.prepare("ALTER TABLE runs ADD COLUMN pid INTEGER").run(); } catch (e) { }
-  try { db.prepare("ALTER TABLE runs ADD COLUMN status TEXT DEFAULT 'running'").run(); } catch (e) { }
-  try { db.prepare("ALTER TABLE runs ADD COLUMN completed_at TEXT").run(); } catch (e) { }
+  try {
+    db.prepare("ALTER TABLE runs ADD COLUMN config_json TEXT").run();
+  } catch (e) {}
+  try {
+    db.prepare("ALTER TABLE runs ADD COLUMN pid INTEGER").run();
+  } catch (e) {}
+  try {
+    db.prepare(
+      "ALTER TABLE runs ADD COLUMN status TEXT DEFAULT 'running'",
+    ).run();
+  } catch (e) {}
+  try {
+    db.prepare("ALTER TABLE runs ADD COLUMN completed_at TEXT").run();
+  } catch (e) {}
 
   // 3. Create remaining tables
   try {
@@ -66,10 +90,15 @@ export function initializeSchema(db: Database.Database): void {
       FOREIGN KEY (run_id) REFERENCES runs(id)
     );
   `);
-  } catch (e) { console.error("Error creating queue/results tables", e); throw e; }
+  } catch (e) {
+    console.error("Error creating queue/results tables", e);
+    throw e;
+  }
 
   // Apply migrations for results table
-  try { db.prepare("ALTER TABLE results ADD COLUMN seo_result TEXT").run(); } catch (e) { }
+  try {
+    db.prepare("ALTER TABLE results ADD COLUMN seo_result TEXT").run();
+  } catch (e) {}
 
   try {
     db.exec(`
@@ -112,13 +141,23 @@ export function initializeSchema(db: Database.Database): void {
       FOREIGN KEY (run_id) REFERENCES runs(id)
     );
   `);
-  } catch (e) { console.error("Error creating findings tables", e); throw e; }
+  } catch (e) {
+    console.error("Error creating findings tables", e);
+    throw e;
+  }
 
   // 4. Queue updates
-  try { db.prepare("ALTER TABLE queue ADD COLUMN duplicate_of INTEGER DEFAULT NULL REFERENCES queue(id)").run(); } catch (e) { }
+  try {
+    db.prepare(
+      "ALTER TABLE queue ADD COLUMN duplicate_of INTEGER DEFAULT NULL REFERENCES queue(id)",
+    ).run();
+  } catch (e) {}
 
   // 5. Results updates (Cascading Runner Phase 4)
-  try { db.prepare("ALTER TABLE results ADD COLUMN page_types TEXT").run(); } catch (e) { }
-  try { db.prepare("ALTER TABLE results ADD COLUMN redirect_url TEXT").run(); } catch (e) { }
+  try {
+    db.prepare("ALTER TABLE results ADD COLUMN page_types TEXT").run();
+  } catch (e) {}
+  try {
+    db.prepare("ALTER TABLE results ADD COLUMN redirect_url TEXT").run();
+  } catch (e) {}
 }
-
