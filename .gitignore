@@ -1,5 +1,6 @@
 data/*.sqlite*
 node_modules
 dist
+*.tsbuildinfo
 .astro
 debug/*
