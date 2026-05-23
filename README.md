@@ -5,7 +5,7 @@ This repository contains the Adaptive Web Auditor, a full-stack tool for scannin
 ## Prerequisites
 
 - Node.js (v18 or higher recommended)
-- npm (or yarn/pnpm)
+- pnpm (required)
 
 ## Installation
 
@@ -19,12 +19,12 @@ This repository contains the Adaptive Web Auditor, a full-stack tool for scannin
 2.  Install dependencies (this handles all workspaces/packages automatically):
 
     ```bash
-    npm install
+    pnpm install
     ```
 
 3.  Build the workspace packages:
     ```bash
-    npm run build
+    pnpm build
     ```
 
 > **Note:** The SQLite database is lazily initialized. The first time you start the web server or run a scan, a `data/awa.sqlite` database will be automatically created with all required tables.
@@ -38,7 +38,7 @@ The Web Dashboard is an Astro + React frontend that lets you view scan logs, aud
 To start the dashboard with hot-reloading:
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 It will be available at `http://localhost:4321`.
@@ -48,8 +48,8 @@ It will be available at `http://localhost:4321`.
 To simulate a fast production build:
 
 ```bash
-npm run build   # Make sure it's built first
-npm run start
+pnpm build   # Make sure it's built first
+pnpm start
 ```
 
 ## CLI Usage
@@ -62,12 +62,12 @@ You can run the CLI directly from the source code without rebuilding the CLI pac
 
 ```bash
 # Run from the root directory
-npx tsx packages/cli/src/index.ts [command] [options]
+pnpm tsx packages/cli/src/index.ts [command] [options]
 ```
 
 ### 2. Production Mode (using built files)
 
-After building the project (`npm run build`), you can run the compiled CLI:
+After building the project (`pnpm build`), you can run the compiled CLI:
 
 ```bash
 # maintain executable permissions if needed
@@ -104,19 +104,19 @@ awa start [options]
 Run a basic scan:
 
 ```bash
-npx tsx packages/cli/src/index.ts start -u https://example.com
+pnpm tsx packages/cli/src/index.ts start -u https://example.com
 ```
 
 Run a shallow scan (depth 1):
 
 ```bash
-npx tsx packages/cli/src/index.ts start -u https://example.com -d 1
+pnpm tsx packages/cli/src/index.ts start -u https://example.com -d 1
 ```
 
 Run with specific plugins:
 
 ```bash
-npx tsx packages/cli/src/index.ts start -u https://example.com -p axe lighthouse
+pnpm tsx packages/cli/src/index.ts start -u https://example.com -p axe lighthouse
 ```
 
 ### Resume a Run (`awa resume`)
@@ -136,7 +136,7 @@ awa resume --run-id <id>
 **Example:**
 
 ```bash
-npx tsx packages/cli/src/index.ts resume --run-id 12345
+pnpm tsx packages/cli/src/index.ts resume --run-id 12345
 ```
 
 ### Check Status (`awa status`)
@@ -156,7 +156,7 @@ awa status --run-id <id>
 **Example:**
 
 ```bash
-npx tsx packages/cli/src/index.ts status --run-id run_12345
+pnpm tsx packages/cli/src/index.ts status --run-id run_12345
 ```
 
 ### Stop a Run (`awa stop`)
@@ -177,12 +177,12 @@ awa stop [options]
 **Example:**
 
 ```bash
-npx tsx packages/cli/src/index.ts stop --all
+pnpm tsx packages/cli/src/index.ts stop --all
 ```
 
 ### Export Results (`awa export`)
 
-Export audit results to JSON or CSV format.
+Export audit results to XLSX or CSV (ZIP) format.
 
 **Syntax:**
 
@@ -193,17 +193,17 @@ awa export --run-id <id> [options]
 **Options:**
 
 - `--run-id <id>`: **(Required)** The Run ID to export.
-- `--format <format>`: Export format (`json` or `csv`). Default: `json`.
+- `--format <format>`: Export format (`xlsx` or `csv`). Default: `xlsx`.
 - `--output <file>`: Output file path. Defaults to stdout if not specified.
 
 **Examples:**
 
 ```bash
-# Export as JSON to a file
-npx tsx packages/cli/src/index.ts export --run-id run_12345 --output report.json
+# Export as XLSX to a file
+pnpm tsx packages/cli/src/index.ts export --run-id run_12345 --output report.xlsx
 
 # Export as CSV
-npx tsx packages/cli/src/index.ts export --run-id run_12345 --format csv --output report.csv
+pnpm tsx packages/cli/src/index.ts export --run-id run_12345 --format csv --output report.csv
 ```
 
 ### Reset Database (`awa reset`)
@@ -223,7 +223,7 @@ awa reset [options]
 **Example:**
 
 ```bash
-npx tsx packages/cli/src/index.ts reset --force
+pnpm tsx packages/cli/src/index.ts reset --force
 ```
 
 ## Configuration
@@ -249,7 +249,7 @@ You can create a JSON configuration file to save your preferences.
 Then run with:
 
 ```bash
-npx tsx packages/cli/src/index.ts start -c awaconfig.json
+pnpm tsx packages/cli/src/index.ts start -c awaconfig.json
 ```
 
 ## Scenario Handling (Interstitials & Modals)
@@ -275,3 +275,14 @@ To add custom logic for a new domain:
 1.  Create a file in `packages/core/src/scenarios/proprietary/<domain>.ts`.
 2.  Implement the `config` and `run` interface.
 3.  Register it in `packages/core/src/scenarios/index.ts`.
+
+## Repository Structure
+
+This project is organized as a monorepo using **pnpm workspaces** and **Turborepo** for fast, incremental builds.
+
+- `apps/web/`: The Astro + React frontend dashboard.
+- `packages/cli/`: The command-line interface (`awa`).
+- `packages/core/`: Orchestration, pipeline, and crawler workers.
+- `packages/db/`: Database schemas, queries, and run management (SQLite).
+- `packages/plugins/`: Audit plugins (Axe for a11y, Lighthouse for performance, custom SEO extractors).
+- `packages/types/`: Shared TypeScript types used across packages.
