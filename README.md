@@ -240,7 +240,7 @@ You can create a JSON configuration file to save your preferences.
 
 ```json
 {
-  "siteUrl": "https://example.com",
+  "siteUrl": []"https://example.com"],
   "maxDepth": 5,
   "plugins": ["axe", "lighthouse"]
 }

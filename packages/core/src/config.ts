@@ -11,6 +11,7 @@ function deepMerge(target: any, source: any): any {
     }
 
     Object.keys(source).forEach(key => {
+        if (source[key] === undefined) return;
         const targetValue = target[key];
         const sourceValue = source[key];
 
