@@ -1,4 +1,4 @@
-import type { AuditContext, AuditPlugin } from "types";
+import type { AuditContext, AuditPlugin } from "@scanner/types";
 import { AxeBuilder } from "@axe-core/playwright";
 import * as fs from 'fs';
 import * as path from 'path';

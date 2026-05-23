@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { getDb, initializeSchema } from "db";
+import { getDb, initializeSchema } from "@scanner/db";
 import { Orchestrator } from "./orchestrator.js";
 import { fileURLToPath } from "node:url";
 import { resolve, dirname } from "node:path";

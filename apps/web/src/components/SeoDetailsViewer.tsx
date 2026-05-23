@@ -1,5 +1,5 @@
 import React from "react";
-import type { SeoResult } from "types";
+import type { SeoResult } from "@scanner/types";
 import { buildSeoPreview } from "../lib/seo-preview";
 import { SeoSerpPreview } from "./SeoSerpPreview";
 import { SeoSocialPreview } from "./SeoSocialPreview";

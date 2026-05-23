@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getDb } from 'db';
+import { getDb } from '@scanner/db';
 import * as path from 'node:path';
 import {
     flattenA11y,
@@ -8,7 +8,7 @@ import {
     generateGlobalRollup,
     generateCsvZipBuffer,
     generateXlsxBuffer
-} from 'core';
+} from '@scanner/core';
 
 export const GET: APIRoute = async ({ params, request }) => {
     const { id } = params;

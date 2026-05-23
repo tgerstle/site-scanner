@@ -26,7 +26,7 @@ export const POST: APIRoute = async ({ request }) => {
     try {
         const isDev = process.env.NODE_ENV !== "production";
         const __dirname = path.dirname(fileURLToPath(import.meta.url));
-        const depth = isDev ? "../../../../../" : "../../../../../../";
+        const depth = isDev ? "../../../../../" : "../../../../../";
         const projectRoot = path.resolve(__dirname, depth);
 
         // This relies on tsx being available which might be specific to dev

@@ -1,5 +1,5 @@
 import type { Database } from "better-sqlite3";
-import type { AuditResults } from "types";
+import type { AuditResults } from "@scanner/types";
 
 export interface SaveResultPayload {
   run_id: string;

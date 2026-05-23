@@ -1,4 +1,4 @@
-import { AuditContext, AuditPlugin, SeoResult } from "types";
+import { AuditContext, AuditPlugin, SeoResult } from "@scanner/types";
 import { SeoValidator } from "./seo-validator.js";
 
 export const SeoMetadataPlugin: AuditPlugin = {

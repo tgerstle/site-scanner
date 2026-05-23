@@ -1,5 +1,5 @@
 import type { Database } from "better-sqlite3";
-import type { ExportDatasets, A11yRow, PerformanceRow, SeoRow, GlobalRollupRow, SeverityLevel } from "types";
+import type { ExportDatasets, A11yRow, PerformanceRow, SeoRow, GlobalRollupRow, SeverityLevel } from "@scanner/types";
 
 function safeParse(jsonString: any): any {
     if (typeof jsonString === 'string') {

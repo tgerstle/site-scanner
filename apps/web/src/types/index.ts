@@ -1,4 +1,4 @@
-import type { SeoResult } from "types";
+import type { SeoResult } from "@scanner/types";
 
 export interface RunSpecificStats {
     runId: string;

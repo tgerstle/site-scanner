@@ -1,34 +1,35 @@
 {
   "name": "scanner",
   "version": "1.0.0",
+  "packageManager": "pnpm@11.0.8",
   "description": "",
   "keywords": [],
   "license": "ISC",
   "author": "",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "dev": "npm run dev --workspace=web",
-    "start": "npm run preview --workspace=web",
-    "build": "npm run build --workspaces",
-    "test": "vitest run",
+    "preinstall": "npx only-allow pnpm",
+    "dev": "turbo run dev",
+    "start": "turbo run preview",
+    "build": "turbo run build",
+    "test": "turbo run test",
     "test:e2e": "vitest run tests/integration/scanner.test.ts",
     "test:golden": "vitest run tests/integration/classifier-suite",
     "test:unit": "vitest run packages/core/src/plugin-resolver.test.ts",
     "test:watch": "vitest",
     "lint": "oxlint --ignore-path .oxlintignore",
     "format": "oxfmt --write .",
+    "clean": "turbo run clean",
     "kill:zombies": "pkill -f 'packages/cli' || echo 'No CLI process found'; pkill -f 'headless' || echo 'No headless Chrome found'"
   },
   "devDependencies": {
     "@types/node": "^25.3.3",
     "oxfmt": "^0.36.0",
     "oxlint": "^1.51.0",
+    "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
+    "turbo": "^2.9.14",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   },

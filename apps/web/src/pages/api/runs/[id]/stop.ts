@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getDatabase } from '~/lib/queries';
-import { stopRun } from 'db';
+import { stopRun } from '@scanner/db';
 
 export const POST: APIRoute = async ({ params }) => {
     const { id: runId } = params;

@@ -8,7 +8,7 @@ import type {
     PageSummary,
     CommonA11yIssue
 } from "../types";
-import { getDb, initializeSchema } from 'db';
+import { getDb, initializeSchema } from '@scanner/db';
 import path from 'node:path';
 import fs from 'node:fs';
 

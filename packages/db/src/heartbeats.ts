@@ -1,5 +1,5 @@
 import type Database from "better-sqlite3";
-import type { WorkerRole } from "types";
+import type { WorkerRole } from "@scanner/types";
 
 export function updateHeartbeat(
   db: Database.Database,

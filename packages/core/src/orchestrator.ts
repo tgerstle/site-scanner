@@ -1,8 +1,8 @@
 import { fork, type ChildProcess } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { IPCMessage, WorkerRole } from "types";
-import { updateHeartbeat, getDeadWorkers, resetDeadWorkerJobs, removeHeartbeat } from "db";
+import type { IPCMessage, WorkerRole } from "@scanner/types";
+import { updateHeartbeat, getDeadWorkers, resetDeadWorkerJobs, removeHeartbeat } from "@scanner/db";
 import type Database from "better-sqlite3";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

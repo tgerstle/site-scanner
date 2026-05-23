@@ -1,5 +1,5 @@
 {
-  "name": "cli",
+  "name": "@scanner/cli",
   "version": "1.0.0",
   "bin": {
     "awa": "./dist/index.js"
@@ -11,9 +11,9 @@
   },
   "dependencies": {
     "commander": "^12.0.0",
-    "core": "*",
-    "db": "*",
-    "types": "*",
+    "@scanner/core": "workspace:*",
+    "@scanner/db": "workspace:*",
+    "@scanner/types": "workspace:*",
     "zod": "^3.22.4"
   },
   "devDependencies": {

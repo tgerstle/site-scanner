@@ -1,4 +1,4 @@
-import type { LogEvent } from "types";
+import type { LogEvent } from "@scanner/types";
 import * as fs from "node:fs";
 import * as path from "node:path";
 

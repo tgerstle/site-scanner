@@ -1,4 +1,4 @@
-import type { AuditContext, AuditPlugin } from "types";
+import type { AuditContext, AuditPlugin } from "@scanner/types";
 
 let playAudit: any = null;
 

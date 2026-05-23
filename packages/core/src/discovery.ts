@@ -1,5 +1,5 @@
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
-import type { LinkFilterOptions } from "types";
+import type { LinkFilterOptions } from "@scanner/types";
 
 export async function setupFastContext(): Promise<{ browser: Browser; context: BrowserContext }> {
   const browser = await chromium.launch({

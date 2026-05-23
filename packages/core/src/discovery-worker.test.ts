@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { getDb, initializeSchema, insertJob } from "db";
+import { getDb, initializeSchema, insertJob } from "@scanner/db";
 import { setupFastContext, filterLinks, discoverLinks } from "./discovery.js";
 import { DiscoveryWorker } from "./discovery-worker.js";
 import Fastify from "fastify";

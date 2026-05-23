@@ -1,4 +1,4 @@
-import type { AuditPlugin } from "types";
+import type { AuditPlugin } from "@scanner/types";
 import { logEvent } from "./logger.js";
 
 export async function loadPlugins(pluginNames: string[]): Promise<AuditPlugin[]> {
@@ -13,16 +13,16 @@ export async function loadPlugins(pluginNames: string[]): Promise<AuditPlugin[]>
   for (const name of pluginNames) {
     try {
       if (name === "axe-core" || name === "axe") {
-        const { AxePlugin } = await import("plugins/dist/axe.js");
+        const { AxePlugin } = await import("@scanner/plugins/dist/axe.js");
         plugins.push(AxePlugin);
       } else if (name === "lighthouse") {
-        const { LighthousePlugin } = await import("plugins/dist/lighthouse.js");
+        const { LighthousePlugin } = await import("@scanner/plugins/dist/lighthouse.js");
         plugins.push(LighthousePlugin);
       } else if (name === "custom-extractor") {
-        const { CustomExtractorPlugin } = await import("plugins/dist/custom-extractor.js");
+        const { CustomExtractorPlugin } = await import("@scanner/plugins/dist/custom-extractor.js");
         plugins.push(CustomExtractorPlugin);
       } else if (name === "seo-metadata") {
-        const { SeoMetadataPlugin } = await import("plugins/dist/seo-metadata.js");
+        const { SeoMetadataPlugin } = await import("@scanner/plugins/dist/seo-metadata.js");
         plugins.push(SeoMetadataPlugin);
       } else {
         console.warn(`Unknown plugin: ${name}`);

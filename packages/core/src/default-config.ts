@@ -1,5 +1,5 @@
 // packages/core/src/default-config.ts
-import { ScannerConfig } from "types";
+import { ScannerConfig } from "@scanner/types";
 
 /**
  * The built-in default configuration for the cascading runner.

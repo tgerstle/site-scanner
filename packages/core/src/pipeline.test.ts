@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { runPipeline } from "./pipeline.js";
-import type { AuditContext, AuditPlugin } from "types";
+import type { AuditContext, AuditPlugin } from "@scanner/types";
 
 describe("runPipeline", () => {
   it("executes plugins in order", async () => {

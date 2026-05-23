@@ -1,4 +1,4 @@
-import { ScannerConfig, ScannerConfigSchema } from "types";
+import { ScannerConfig, ScannerConfigSchema } from "@scanner/types";
 import { DEFAULT_CONFIG } from "./default-config.js";
 import * as fs from "node:fs";
 

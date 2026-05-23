@@ -13,7 +13,7 @@ export const POST: APIRoute = async () => {
     // Generic path resolution logic based on build structure
     // In dev: apps/web/src/pages/api/stop.ts (5 levels deep from root)
     // In prod: apps/web/dist/server/pages/api/stop.astro.mjs (6 levels deep from root)
-    const depth = isDev ? "../../../../../" : "../../../../../../";
+    const depth = isDev ? "../../../../../" : "../../../../../";
     const projectRoot = path.resolve(__dirname, depth);
 
     // Fallback: if we are in a built output structure, logs might help debug

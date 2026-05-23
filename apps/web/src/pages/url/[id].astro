@@ -3,7 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import ViolationList from '../../components/ViolationList';
 import PerformanceFindingsList from '../../components/PerformanceFindingsList';
 
-import { getDb, initializeSchema } from 'db';
+import { getDb, initializeSchema } from '@scanner/db';
 import path from 'node:path';
 
 const { id } = Astro.params;

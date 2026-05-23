@@ -9,7 +9,7 @@ export const POST: APIRoute = async () => {
     try {
         const isDev = process.env.NODE_ENV !== "production";
         const __dirname = path.dirname(fileURLToPath(import.meta.url));
-        const depth = isDev ? "../../../../../" : "../../../../../../";
+        const depth = isDev ? "../../../../../" : "../../../../../";
         const projectRoot = path.resolve(__dirname, depth);
 
         // Assume built CLI 

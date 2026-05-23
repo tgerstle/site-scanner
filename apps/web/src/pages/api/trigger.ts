@@ -29,7 +29,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Generic path resolution matching other endpoints (stop.ts, reset.ts)
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
-    const depth = isDev ? "../../../../../" : "../../../../../../";
+    const depth = isDev ? "../../../../../" : "../../../../../";
     const projectRoot = path.resolve(__dirname, depth);
     console.log(`[API] Derived Project Root: ${projectRoot}`);
 

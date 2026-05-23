@@ -1,10 +1,10 @@
 import { WorkerLoop } from "./worker-base.js";
 import { setupFastContext, filterLinks, discoverLinks } from "./discovery.js";
 import { logEvent } from "./logger.js";
-import { claimNextJob, insertJob, updateJobStatus, getRunConfig } from "db";
+import { claimNextJob, insertJob, updateJobStatus, getRunConfig } from "@scanner/db";
 import type { Database } from "better-sqlite3";
 import type { Browser, BrowserContext } from "playwright";
-import type { ScannerConfig } from "types";
+import type { ScannerConfig } from "@scanner/types";
 
 export class DiscoveryWorker extends WorkerLoop {
     private browser: Browser | null = null;

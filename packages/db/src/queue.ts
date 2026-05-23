@@ -1,5 +1,5 @@
 import type Database from "better-sqlite3";
-import type { QueueRow, WorkerRole, QueueStatus } from "types";
+import type { QueueRow, WorkerRole, QueueStatus } from "@scanner/types";
 
 export function claimNextJob(
   db: Database.Database,

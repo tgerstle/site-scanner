@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { resolvePlugins } from './plugin-resolver.js';
-import { ScannerConfig, AuditPlugin } from 'types';
+import { ScannerConfig, AuditPlugin } from '@scanner/types';
 
 describe('resolvePlugins', () => {
     // Mock Plugins

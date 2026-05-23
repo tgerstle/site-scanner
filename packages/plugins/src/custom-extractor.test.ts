@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { CustomExtractorPlugin } from "./custom-extractor.js";
-import type { AuditContext } from "types";
+import type { AuditContext } from "@scanner/types";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import Fastify from "fastify";
 import type { FastifyInstance } from "fastify";

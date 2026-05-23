@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { ScannerConfig } from "types";
-import { logEvent, Orchestrator, analyzeRun, loadConfig, fetchSitemapUrls, normalizeUrl, setupFastContext, PageClassifier, flattenA11y, flattenPerformance, flattenSeo, generateGlobalRollup, generateCsvZipBuffer, generateXlsxBuffer } from "core";
-import { getDb, initializeSchema, createRun, insertJob, stopRun } from "db";
+import { ScannerConfig } from "@scanner/types";
+import { logEvent, Orchestrator, analyzeRun, loadConfig, fetchSitemapUrls, normalizeUrl, setupFastContext, PageClassifier, flattenA11y, flattenPerformance, flattenSeo, generateGlobalRollup, generateCsvZipBuffer, generateXlsxBuffer } from "@scanner/core";
+import { getDb, initializeSchema, createRun, insertJob, stopRun } from "@scanner/db";
 import * as path from "node:path";
 import * as fs from "node:fs";
 

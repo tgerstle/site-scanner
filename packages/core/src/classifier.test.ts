@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { PageClassifier } from "./classifier.js";
-import { ScannerConfig } from "types";
+import { ScannerConfig } from "@scanner/types";
 import { Page } from "playwright";
 
 describe("PageClassifier", () => {

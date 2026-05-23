@@ -4,3 +4,6 @@ dist
 *.tsbuildinfo
 .astro
 debug/*
+.turbo
+
+scanner_run.log

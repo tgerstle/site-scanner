@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { resolve } from "node:path";
 import * as fs from "node:fs";
 import { loadConfig } from "./config.js";
-import { ScannerConfigSchema } from "types";
+import { ScannerConfigSchema } from "@scanner/types";
 
 describe("Configuration Loading", () => {
     it("loads from partial config object (overrides)", () => {

@@ -1,7 +1,7 @@
-import { ScannerConfig, PluginConfigObj } from "types"; // Added PluginConfigObj
-import type { WorkerRole } from "types";
+import { ScannerConfig, PluginConfigObj } from "@scanner/types"; // Added PluginConfigObj
+import type { WorkerRole } from "@scanner/types";
 import { logEvent } from "./logger.js";
-import { getDb, getRunConfig } from "db"; // Implicitly returns ScannerConfig
+import { getDb, getRunConfig } from "@scanner/db"; // Implicitly returns ScannerConfig
 import * as path from "node:path";
 import { DiscoveryWorker } from "./discovery-worker.js";
 import { AuditWorker } from "./audit-worker.js";

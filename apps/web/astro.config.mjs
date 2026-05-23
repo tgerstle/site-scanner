@@ -11,7 +11,7 @@ export default defineConfig({
   integrations: [react(), tailwind()],
   vite: {
     ssr: {
-      external: ["better-sqlite3"],
+      external: ["better-sqlite3", "fsevents"],
     },
   },
 });

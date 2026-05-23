@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { getDb, initializeSchema, insertJob } from "db";
+import { getDb, initializeSchema, insertJob } from "@scanner/db";
 import { AuditWorker } from "./audit-worker.js";
 import Fastify from "fastify";
 import type { FastifyInstance } from "fastify";
-import type { AuditPlugin } from "types";
+import type { AuditPlugin } from "@scanner/types";
 
 describe("AuditWorker", () => {
   let server: FastifyInstance;

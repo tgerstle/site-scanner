@@ -1,4 +1,4 @@
-import type { WorkerRole, IPCMessage } from "types";
+import type { WorkerRole, IPCMessage } from "@scanner/types";
 import { logEvent } from "./logger.js";
 
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds

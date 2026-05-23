@@ -1,4 +1,4 @@
-import type { SeoResult, SeoValidationResult } from "types";
+import type { SeoResult, SeoValidationResult } from "@scanner/types";
 
 export class SeoValidator {
     static validate(data: SeoResult, currentUrl: string): SeoValidationResult {

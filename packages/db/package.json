@@ -1,5 +1,5 @@
 {
-  "name": "db",
+  "name": "@scanner/db",
   "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",
@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0",
-    "types": "*"
+    "@scanner/types": "workspace:*"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.9",

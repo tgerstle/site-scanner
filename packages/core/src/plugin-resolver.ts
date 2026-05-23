@@ -1,4 +1,4 @@
-import { AuditPlugin, PluginConfigObj, ScannerConfig } from "types";
+import { AuditPlugin, PluginConfigObj, ScannerConfig } from "@scanner/types";
 import { PluginExecutionConfig } from "./pipeline.js";
 
 /**

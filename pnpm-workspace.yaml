@@ -1,0 +1,14 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+allowBuilds:
+  base64: true
+  better-sqlite3: true
+  compress-buffer: true
+  esbuild: true
+  hiredis: true
+  iconv: true
+  pg: true
+  sharp: true
+  stacktrace: true
+  uriparser: true

@@ -1,5 +1,5 @@
 import { Page, Response } from "playwright";
-import { ScannerConfig, PageDefinition } from "types";
+import { ScannerConfig, PageDefinition } from "@scanner/types";
 
 export interface ClassificationResult {
     types: string[];

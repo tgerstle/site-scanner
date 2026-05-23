@@ -1,5 +1,5 @@
 {
-  "name": "plugins",
+  "name": "@scanner/plugins",
   "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",
@@ -11,7 +11,7 @@
     "@axe-core/playwright": "^4.10.1",
     "lighthouse": "^12.8.2",
     "playwright-lighthouse": "^4.0.0",
-    "types": "*"
+    "@scanner/types": "workspace:*"
   },
   "devDependencies": {
     "fastify": "^5.7.4",

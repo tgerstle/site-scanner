@@ -8,7 +8,7 @@ export const POST: APIRoute = async () => {
 
     // Generic path resolution logic based on build structure
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
-    const depth = isDev ? "../../../../../" : "../../../../../../";
+    const depth = isDev ? "../../../../../" : "../../../../../";
     const projectRoot = path.resolve(__dirname, depth);
 
     const cliSourcePath = path.join(projectRoot, "packages/cli/src/index.ts");
