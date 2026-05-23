@@ -171,7 +171,7 @@ const FindingRow = ({ finding }: { finding: PerformanceFinding }) => {
   let details = null;
   try {
     details = finding.details_json ? JSON.parse(finding.details_json) : null;
-  } catch (e) {}
+  } catch {}
 
   const hasDetails = details && details.items && details.items.length > 0;
   const scoreColor = (score: number) => {

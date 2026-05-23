@@ -62,7 +62,7 @@ You can run the CLI directly from the source code without rebuilding the CLI pac
 
 ```bash
 # Run from the root directory
-pnpm tsx packages/cli/src/index.ts [command] [options]
+pnpm awa [command] [options]
 ```
 
 ### 2. Production Mode (using built files)
@@ -104,19 +104,19 @@ awa start [options]
 Run a basic scan:
 
 ```bash
-pnpm tsx packages/cli/src/index.ts start -u https://example.com
+pnpm awa start -u https://example.com
 ```
 
 Run a shallow scan (depth 1):
 
 ```bash
-pnpm tsx packages/cli/src/index.ts start -u https://example.com -d 1
+pnpm awa start -u https://example.com -d 1
 ```
 
 Run with specific plugins:
 
 ```bash
-pnpm tsx packages/cli/src/index.ts start -u https://example.com -p axe lighthouse
+pnpm awa start -u https://example.com -p axe lighthouse
 ```
 
 ### Resume a Run (`awa resume`)
@@ -136,7 +136,7 @@ awa resume --run-id <id>
 **Example:**
 
 ```bash
-pnpm tsx packages/cli/src/index.ts resume --run-id 12345
+pnpm awa resume --run-id 12345
 ```
 
 ### Check Status (`awa status`)
@@ -156,7 +156,7 @@ awa status --run-id <id>
 **Example:**
 
 ```bash
-pnpm tsx packages/cli/src/index.ts status --run-id run_12345
+pnpm awa status --run-id run_12345
 ```
 
 ### Stop a Run (`awa stop`)
@@ -177,7 +177,7 @@ awa stop [options]
 **Example:**
 
 ```bash
-pnpm tsx packages/cli/src/index.ts stop --all
+pnpm awa stop --all
 ```
 
 ### Export Results (`awa export`)
@@ -200,10 +200,10 @@ awa export --run-id <id> [options]
 
 ```bash
 # Export as XLSX to a file
-pnpm tsx packages/cli/src/index.ts export --run-id run_12345 --output report.xlsx
+pnpm awa export --run-id run_12345 --output report.xlsx
 
 # Export as CSV
-pnpm tsx packages/cli/src/index.ts export --run-id run_12345 --format csv --output report.csv
+pnpm awa export --run-id run_12345 --format csv --output report.csv
 ```
 
 ### Reset Database (`awa reset`)
@@ -223,7 +223,7 @@ awa reset [options]
 **Example:**
 
 ```bash
-pnpm tsx packages/cli/src/index.ts reset --force
+pnpm awa reset --force
 ```
 
 ## Configuration
@@ -249,7 +249,7 @@ You can create a JSON configuration file to save your preferences.
 Then run with:
 
 ```bash
-pnpm tsx packages/cli/src/index.ts start -c awaconfig.json
+pnpm awa start -c awaconfig.json
 ```
 
 ## Scenario Handling (Interstitials & Modals)

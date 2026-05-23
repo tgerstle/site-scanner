@@ -9,13 +9,13 @@ export function createRun(db: Database, config: any): string {
     // Add columns dynamically if running against old DB
     try {
         db.exec("ALTER TABLE runs ADD COLUMN config_json TEXT;");
-    } catch (e) { }
+    } catch { }
     try {
         db.exec("ALTER TABLE runs ADD COLUMN pid INTEGER;");
-    } catch (e) { }
+    } catch { }
     try {
         db.exec("ALTER TABLE runs ADD COLUMN status TEXT DEFAULT 'running';");
-    } catch (e) { }
+    } catch { }
 
     db.prepare(`
         INSERT INTO runs (id, started_at, config_hash, config_json, pid, status) 

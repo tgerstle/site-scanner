@@ -45,7 +45,7 @@ export async function run(page: Page): Promise<void> {
         await page.keyboard.press('Escape');
         await page.waitForTimeout(100);
         await page.keyboard.press('Escape'); // Second press for nested dialogs
-    } catch (e) {
+    } catch {
         // Ignore keyboard errors
     }
 
@@ -60,7 +60,7 @@ export async function run(page: Page): Promise<void> {
                 await element.click({ timeout: 1000, force: true });
                 await page.waitForTimeout(250); // specific wait for animation
             }
-        } catch (e) {
+        } catch {
             // Ignore click errors (element might be covered or detached)
         }
     }

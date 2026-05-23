@@ -62,7 +62,7 @@ function identifyDuplicates(db: Database, runId: string) {
                             if (typeof data.performance_score === 'number') {
                                 item.score = data.performance_score;
                             }
-                        } catch (e) { }
+                        } catch { }
                     }
 
                     // Parse a11y count
@@ -73,7 +73,7 @@ function identifyDuplicates(db: Database, runId: string) {
                             if (Array.isArray(v)) {
                                 item.a11y_count = v.reduce((sum: number, issue: any) => sum + (issue.nodes?.length || 0), 0);
                             }
-                        } catch (e) { }
+                        } catch { }
                     }
                 });
 

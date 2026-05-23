@@ -345,7 +345,7 @@ export default function PerformanceInsights({
                     issue.pages.map((p) => {
                       try {
                         return JSON.parse(p).url;
-                      } catch (e) {
+                      } catch {
                         return null;
                       }
                     }),
@@ -490,7 +490,7 @@ export default function PerformanceInsights({
                                             )}
                                           </li>
                                         );
-                                      } catch (e) {
+                                      } catch {
                                         return null;
                                       }
                                     })}

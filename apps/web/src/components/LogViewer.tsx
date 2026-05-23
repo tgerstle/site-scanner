@@ -11,7 +11,7 @@ export default function LogViewer() {
         // Reverse logs to show newest first
         setLogs((data.logs || []).reverse());
       }
-    } catch (err) {}
+    } catch {}
   };
 
   useEffect(() => {
@@ -24,7 +24,7 @@ export default function LogViewer() {
     try {
       await fetch("/api/flush-logs", { method: "POST" });
       setLogs([]);
-    } catch (e) {
+    } catch {
       console.error(e);
     }
   };

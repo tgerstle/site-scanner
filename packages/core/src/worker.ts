@@ -1,4 +1,4 @@
-import { ScannerConfig, PluginConfigObj } from "@scanner/types"; // Added PluginConfigObj
+import { ScannerConfig } from "@scanner/types";
 import type { WorkerRole } from "@scanner/types";
 import { logEvent } from "./logger.js";
 import { getDb, getRunConfig } from "@scanner/db"; // Implicitly returns ScannerConfig

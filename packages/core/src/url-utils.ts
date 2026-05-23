@@ -112,7 +112,7 @@ export function normalizeUrl(
         // Yes, searchParams.sort() modifies the internal list.
         return url.toString();
 
-    } catch (e) {
+    } catch {
         // If invalid URL, return original input (or throw?)
         // Usually better to return input for robustness, but maybe warn
         return inputUrl;

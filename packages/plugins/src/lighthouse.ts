@@ -9,7 +9,7 @@ export const LighthousePlugin: AuditPlugin = {
             try {
                 const mod = await import("playwright-lighthouse");
                 playAudit = mod.playAudit;
-            } catch (err) {
+            } catch {
                 ctx.log("playwright-lighthouse not installed. Skipping lighthouse audit.");
                 return;
             }

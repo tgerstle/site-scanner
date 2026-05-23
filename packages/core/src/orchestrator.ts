@@ -40,7 +40,7 @@ export class Orchestrator {
       }
     });
 
-    worker.on("exit", (code) => {
+    worker.on("exit", (_code) => {
       this.workers.delete(workerId);
       // Let zombie detection handle it, or recover immediately
       this.recoverDeadWorker(workerId, role);

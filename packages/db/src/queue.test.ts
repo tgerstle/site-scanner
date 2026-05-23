@@ -1,5 +1,4 @@
 import { describe, it, expect } from "vitest";
-import { resolve } from "node:path";
 import { getDb, initializeSchema } from "./connection.js";
 import { claimNextJob, insertJob } from "./queue.js";
 

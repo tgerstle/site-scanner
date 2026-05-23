@@ -6,7 +6,7 @@ import { logEvent } from "./logger.js";
 import { claimNextJob, updateJobStatus, saveAuditResult, insertJob } from "@scanner/db";
 import type { Database } from "better-sqlite3";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
-import type { ScannerConfig, AuditContext, AuditPlugin, PluginConfigObj } from "@scanner/types";
+import type { ScannerConfig, AuditContext, AuditPlugin } from "@scanner/types";
 import { PageClassifier } from "./classifier.js";
 import { normalizeUrl } from "./url-utils.js";
 import { filterLinks } from "./discovery.js";
@@ -161,7 +161,7 @@ export class AuditWorker extends WorkerLoop {
                             workerId: this.workerId
                         });
                     }
-                } catch (e) {
+                } catch {
                     // Ignore networkidle timeout, we proceed with whatever we have
                 }
             }

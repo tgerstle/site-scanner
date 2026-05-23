@@ -64,7 +64,7 @@ export const SeoMetadataPlugin: AuditPlugin = {
                             jsonLd.push(parsed);
                         }
                     }
-                } catch (e) {
+                } catch {
                     // Store minimal error info if possible, or just skip
                     jsonLd.push({ _error: "Invalid JSON-LD", raw: el.textContent?.substring(0, 100) });
                 }

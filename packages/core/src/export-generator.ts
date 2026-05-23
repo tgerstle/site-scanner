@@ -1,7 +1,6 @@
 import ExcelJS from 'exceljs';
 import { stringify } from 'csv-stringify/sync';
 import archiver from 'archiver';
-import path from 'node:path';
 import { PassThrough } from 'node:stream';
 import type { ExportDatasets } from '@scanner/types';
 

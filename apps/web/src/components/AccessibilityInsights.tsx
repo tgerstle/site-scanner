@@ -2,33 +2,6 @@
 import React, { useState, useEffect } from "react";
 import type { CommonA11yIssue } from "../types";
 
-// Helper component for descriptions
-const Description = ({ text }: { text?: string }) => {
-  if (!text) return null;
-  const parts = text.split(/(\[.*?\]\(.*?\))/g);
-  return (
-    <div className="text-gray-600 text-xs mt-1">
-      {parts.map((part, i) => {
-        const match = part.match(/\[(.*?)\]\((.*?)\)/);
-        if (match) {
-          return (
-            <a
-              key={i}
-              href={match[2]}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {match[1]}
-            </a>
-          );
-        }
-        return part;
-      })}
-    </div>
-  );
-};
 
 interface InsightsProps {
   runId: string;

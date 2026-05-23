@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getPerformanceFindings, getCommonPerformanceIssues } from '../../../../lib/queries';
 
-export const GET: APIRoute = async ({ params, request }) => {
+export const GET: APIRoute = async ({ params }) => {
     const { id } = params;
 
     if (!id) {

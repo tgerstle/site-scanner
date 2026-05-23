@@ -21,7 +21,7 @@ export function getDatabase() {
         try {
             // Check if connection is alive (dummy query)
             _db.prepare('SELECT 1').get();
-        } catch (e) {
+        } catch {
             _db = null; // Reconnect
         }
     }
@@ -105,7 +105,7 @@ export function getStats(): DashboardStats {
                     urlLabel = `Sitemap: ${config.sitemap}`;
                 }
             }
-        } catch (e) {
+        } catch {
             console.error('Failed to parse config for run', run.id, e);
         }
 
@@ -227,7 +227,7 @@ export function getRunDetails(runId: string): RunDetail | null {
         if (p.page_types) {
             try {
                 page.pageTypes = JSON.parse(p.page_types);
-            } catch (e) {
+            } catch {
                 // ignore
             }
         }
@@ -247,7 +247,7 @@ export function getRunDetails(runId: string): RunDetail | null {
                     page.best_practices_score = custom.best_practices_score;
                 }
             }
-        } catch (e) {
+        } catch {
             // ignore JSON parse error
         }
 
@@ -256,14 +256,12 @@ export function getRunDetails(runId: string): RunDetail | null {
             if (p.seo_result) {
                 page.seo_result = JSON.parse(p.seo_result);
             }
-        } catch (e) {
+        } catch {
             // ignore
         }
 
         return page;
     });
-
-    const completedPagesWithScores = effectivePages.filter((p: any) => p.status === 'completed' && (p.performance_score !== undefined || p.seo_score !== undefined));
 
     const avg = (key: string) => {
         // Ensure values are numbers
@@ -302,12 +300,12 @@ export function getPageDetails(runId: string, url: string) {
     let custom_data = {};
     try {
         custom_data = result.custom_data ? JSON.parse(result.custom_data) : {};
-    } catch (e) { }
+    } catch { }
 
     let seo_result = null;
     try {
         seo_result = result.seo_result ? JSON.parse(result.seo_result) : null;
-    } catch (e) { }
+    } catch { }
 
     return {
         ...result,
@@ -345,7 +343,7 @@ export function deleteRun(runId: string): boolean {
             db.prepare('DELETE FROM runs WHERE id = ?').run(runId);
         })();
         return true;
-    } catch (e) {
+    } catch {
         console.error(`Failed to delete run ${runId}:`, e);
         return false;
     }
@@ -384,7 +382,7 @@ export function getPerformanceFindings(runId: string): PerformanceFindingAggrega
             ...row,
             pages: row.pages_json ? JSON.parse(row.pages_json) : []
         }));
-    } catch (e) {
+    } catch {
         console.error('Error fetching performance findings:', e);
         return [];
     }
@@ -489,7 +487,7 @@ export function getCommonPerformanceIssues(runId: string): CommonIssue[] {
                         entry.pages.push(pageEntry);
                     }
                 }
-            } catch (e) {
+            } catch {
                 // Ignore parse errors for individual rows
             }
         }
@@ -504,7 +502,7 @@ export function getCommonPerformanceIssues(runId: string): CommonIssue[] {
             })
             .slice(0, 50); // Top 50
 
-    } catch (e) {
+    } catch {
         console.error('Error calculating common performance issues:', e);
         return [];
     }
@@ -584,14 +582,14 @@ export function getCommonAccessibilityIssues(runId: string): CommonA11yIssue[] {
                         pages: pages
                     });
                 }
-            } catch (e) {
+            } catch {
                 // JSON parse error
             }
         }
 
         return results;
 
-    } catch (e) {
+    } catch {
         console.error('Error fetching a11y issues:', e);
         return [];
     }
@@ -601,7 +599,7 @@ export function getRunAlerts(runId: string) {
     const db = getDatabase();
     try {
         return db.prepare('SELECT * FROM scan_alerts WHERE run_id = ? ORDER BY created_at DESC').all(runId);
-    } catch (e) {
+    } catch {
         console.error('Error fetching run alerts:', e);
         return [];
     }

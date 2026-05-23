@@ -32,8 +32,7 @@ export const POST: APIRoute = async ({ request }) => {
         // This relies on tsx being available which might be specific to dev
         // In clean production build, we should run the built JS
         const cliBuildPath = path.join(projectRoot, "packages/cli/dist/index.js");
-        const cliSourcePath = path.join(projectRoot, "packages/cli/src/index.ts");
-
+        
         // Command Construction
         // If dist exists, use node dist/index.js
         // Else use npx tsx src/index.ts
@@ -57,8 +56,7 @@ export const POST: APIRoute = async ({ request }) => {
         // For development convenience:
         // Use tsx if dist doesn't exist?
 
-        const cliArgs = ["classify", "--url", url];
-
+        
         return new Promise((resolve) => {
             console.log(`[API] Spawning: ${cmd} ${args.join(" ")}`);
             const child = spawn(cmd, args, {

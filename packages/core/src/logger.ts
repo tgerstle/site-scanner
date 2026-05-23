@@ -16,7 +16,7 @@ export function logEvent(event: LogEvent, stream = process.stdout) {
       logPath = path.join(path.dirname(process.env.AWA_DB_PATH), "scanner_run.log");
     }
     fs.appendFileSync(logPath, logLine);
-  } catch (e) {
+  } catch {
     // Safe fail
   }
 }

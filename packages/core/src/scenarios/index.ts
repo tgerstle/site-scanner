@@ -65,7 +65,7 @@ export async function runScenario(url: string, page: Page): Promise<string[]> {
         if (bodyClass.includes("modal-open") || bodyClass.includes("overflow-hidden")) {
             logs.push(`[WARN] Page body still has suspicious classes after cleanup: "${bodyClass}"`);
         }
-    } catch (e) {
+    } catch {
         // Ignore evaluation errors
     }
 

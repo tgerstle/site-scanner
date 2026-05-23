@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { ScannerConfig } from "@scanner/types";
-import { logEvent, Orchestrator, analyzeRun, loadConfig, fetchSitemapUrls, normalizeUrl, setupFastContext, PageClassifier, flattenA11y, flattenPerformance, flattenSeo, generateGlobalRollup, generateCsvZipBuffer, generateXlsxBuffer } from "@scanner/core";
+import { logEvent, Orchestrator, analyzeRun, loadConfig, fetchSitemapUrls, setupFastContext, PageClassifier, flattenA11y, flattenPerformance, flattenSeo, generateGlobalRollup, generateCsvZipBuffer, generateXlsxBuffer } from "@scanner/core";
 import { getDb, initializeSchema, createRun, insertJob, stopRun } from "@scanner/db";
 import * as path from "node:path";
 import * as fs from "node:fs";
@@ -122,8 +121,8 @@ program
             // Consolidated Worker Mode:
             // We launch multiple "audit" workers that handle both discovery and auditing.
             // This replaces the separate Discovery/Audit phases.
-            const auditWorker1 = orchestrator.spawnWorker("audit", `${runId}_aud_1`);
-            const auditWorker2 = orchestrator.spawnWorker("audit", `${runId}_aud_2`);
+            orchestrator.spawnWorker("audit", `${runId}_aud_1`);
+            orchestrator.spawnWorker("audit", `${runId}_aud_2`);
 
             // Poll for completion
             const checkInterval = setInterval(() => {
@@ -331,7 +330,7 @@ program
                                 process.kill(run.pid, 0); // Check if still running
                                 await new Promise(resolve => setTimeout(resolve, 100));
                                 tries++;
-                            } catch (e) {
+                            } catch {
                                 break; // Process exited
                             }
                         }

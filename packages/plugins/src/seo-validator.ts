@@ -1,7 +1,7 @@
 import type { SeoResult, SeoValidationResult } from "@scanner/types";
 
 export class SeoValidator {
-    static validate(data: SeoResult, currentUrl: string): SeoValidationResult {
+    static validate(data: SeoResult, _currentUrl: string): SeoValidationResult {
         const meta: SeoValidationResult["meta"] = {
             status: "pass",
             errors: [],

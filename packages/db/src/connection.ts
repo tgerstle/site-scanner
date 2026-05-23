@@ -47,18 +47,18 @@ export function initializeSchema(db: Database.Database): void {
   // 2. Apply migrations for existing databases (idempotent)
   try {
     db.prepare("ALTER TABLE runs ADD COLUMN config_json TEXT").run();
-  } catch (e) {}
+  } catch {}
   try {
     db.prepare("ALTER TABLE runs ADD COLUMN pid INTEGER").run();
-  } catch (e) {}
+  } catch {}
   try {
     db.prepare(
       "ALTER TABLE runs ADD COLUMN status TEXT DEFAULT 'running'",
     ).run();
-  } catch (e) {}
+  } catch {}
   try {
     db.prepare("ALTER TABLE runs ADD COLUMN completed_at TEXT").run();
-  } catch (e) {}
+  } catch {}
 
   // 3. Create remaining tables
   try {
@@ -98,7 +98,7 @@ export function initializeSchema(db: Database.Database): void {
   // Apply migrations for results table
   try {
     db.prepare("ALTER TABLE results ADD COLUMN seo_result TEXT").run();
-  } catch (e) {}
+  } catch {}
 
   try {
     db.exec(`
@@ -151,13 +151,13 @@ export function initializeSchema(db: Database.Database): void {
     db.prepare(
       "ALTER TABLE queue ADD COLUMN duplicate_of INTEGER DEFAULT NULL REFERENCES queue(id)",
     ).run();
-  } catch (e) {}
+  } catch {}
 
   // 5. Results updates (Cascading Runner Phase 4)
   try {
     db.prepare("ALTER TABLE results ADD COLUMN page_types TEXT").run();
-  } catch (e) {}
+  } catch {}
   try {
     db.prepare("ALTER TABLE results ADD COLUMN redirect_url TEXT").run();
-  } catch (e) {}
+  } catch {}
 }

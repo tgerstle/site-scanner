@@ -51,7 +51,7 @@ function AlertItem({ alert }: { alert: any }) {
           ? JSON.parse(alert.details_json)
           : alert.details_json;
     }
-  } catch (e) {
+  } catch {
     console.error("Failed to parse alert details", e);
   }
 

@@ -21,7 +21,10 @@
     "lint": "oxlint --ignore-path .oxlintignore",
     "format": "oxfmt --write .",
     "clean": "turbo run clean",
-    "kill:zombies": "pkill -f 'packages/cli' || echo 'No CLI process found'; pkill -f 'headless' || echo 'No headless Chrome found'"
+    "kill:zombies": "pkill -f 'packages/cli' || echo 'No CLI process found'; pkill -f 'headless' || echo 'No headless Chrome found'",
+    "awa": "tsx packages/cli/src/index.ts",
+    "awa:prod": "node packages/cli/dist/index.js",
+    "ci:local": "pnpm lint && pnpm build && pnpm test"
   },
   "devDependencies": {
     "@types/node": "^25.3.3",

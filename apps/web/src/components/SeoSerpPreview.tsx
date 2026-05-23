@@ -12,7 +12,7 @@ export function SeoSerpPreview({ serp }: SeoSerpPreviewProps) {
   let hostname = serp.url;
   try {
     hostname = new URL(serp.url).hostname;
-  } catch (e) {
+  } catch {
     hostname = serp.url;
   }
 

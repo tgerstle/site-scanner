@@ -2,7 +2,7 @@
 import type { APIRoute } from 'astro';
 import { getCommonAccessibilityIssues } from '../../../../lib/queries';
 
-export const GET: APIRoute = async ({ params, request }) => {
+export const GET: APIRoute = async ({ params }) => {
     const { id } = params;
     if (!id) {
         return new Response(JSON.stringify({ error: 'Run ID is required' }), { status: 400 });

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+import { describe, it, expect, afterEach, beforeEach } from "vitest";
 import { getDb, initializeSchema } from "@scanner/db";
 import { Orchestrator } from "./orchestrator.js";
 import { fileURLToPath } from "node:url";
@@ -45,8 +45,7 @@ describe("Orchestrator", () => {
     await new Promise((resolve) => worker.on("exit", resolve));
 
     // Check if heartbeat was written to DB
-    const row = db
-      .prepare("SELECT * FROM heartbeats WHERE worker_id = 'test_worker_1'")
+    db.prepare("SELECT * FROM heartbeats WHERE worker_id = 'test_worker_1'")
       .get() as any;
     // Note: The dummy worker exits, which triggers recoverDeadWorker, which removes the heartbeat!
     // So the heartbeat might be gone by the time we check it.

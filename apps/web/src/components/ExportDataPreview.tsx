@@ -11,7 +11,7 @@ export const ExportDataPreview = ({ runId }: { runId: string }) => {
         const res = await fetch(`/api/runs/${runId}/export?format=json`);
         const json = await res.json();
         setData(json);
-      } catch (e) {
+      } catch {
         console.error("Failed to load preview data", e);
       } finally {
         setLoading(false);

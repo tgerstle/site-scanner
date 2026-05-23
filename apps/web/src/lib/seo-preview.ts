@@ -28,7 +28,7 @@ export function buildSeoPreview(result: SeoResult, url: string): SeoPreviewData 
     let domain = "";
     try {
         domain = new URL(url).hostname;
-    } catch (e) {
+    } catch {
         domain = url;
     }
 
