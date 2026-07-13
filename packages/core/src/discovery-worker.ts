@@ -1,5 +1,6 @@
 import { WorkerLoop } from "./worker-base.js";
 import { setupFastContext, filterLinks, discoverLinks } from "./discovery.js";
+import { triageResource, isTwoTrackModeEnabled } from "./resource-triage.js";
 import { logEvent } from "./logger.js";
 import { claimNextJob, insertJob, updateJobStatus, getRunConfig } from "@scanner/db";
 import type { Database } from "better-sqlite3";
@@ -55,13 +56,26 @@ export class DiscoveryWorker extends WorkerLoop {
 
             // We only insert if we haven't reached maxDepth
             if (nextDepth <= maxDepth) {
+                // Phase 5: Check if two-track mode is enabled
+                const twoTrackEnabled = isTwoTrackModeEnabled(this.config);
+
                 // Run insertions in a transaction for speed
                 const insertMany = this.db.transaction((urls: string[]) => {
                     for (const url of urls) {
+                        // Conditionally apply triage based on feature flag
+                        const metadata = twoTrackEnabled
+                            ? triageResource(url)
+                            : { resourceType: "unknown", auditDisposition: "deferred", skipReason: null };
+
                         insertJob(this.db, {
                             run_id: job.run_id,
                             url,
                             depth: nextDepth,
+                            resource_type: metadata.resourceType,
+                            audit_disposition: metadata.auditDisposition,
+                            skip_reason: metadata.skipReason,
+                            source: "crawl",
+                            discovered_from: job.url,
                         });
                     }
                 });

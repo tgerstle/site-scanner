@@ -75,6 +75,23 @@ export const DiscoveryConfigSchema = z.object({
 
 export type DiscoveryConfig = z.infer<typeof DiscoveryConfigSchema>;
 
+/**
+ * Phase 4: Non-HTML resource audit policy.
+ */
+export const NonHtmlPolicySchema = z.object({
+    /**
+     * Phase 5: Master flag to enable/disable two-track model.
+     * Default: false (legacy behavior stays enabled initially)
+     * Set to true to activate resource triage, inventory, and gating.
+     */
+    enabled: z.boolean().default(false),
+    auditHtmlOnly: z.boolean().default(true),
+    auditDocuments: z.boolean().default(false),
+    documentContentTypes: z.array(z.string()).default(["application/pdf"]),
+}).optional();
+
+export type NonHtmlPolicy = z.infer<typeof NonHtmlPolicySchema>;
+
 export const ScannerConfigSchema = z.object({
     siteUrl: z.string().url(),
 
@@ -104,21 +121,52 @@ export const ScannerConfigSchema = z.object({
      * Maps a Page Type to a list of plugins to execute.
      * Key = Page Type ID
      * Value = Array of plugin names OR config objects.
-     * Example: ["seo-tech", { name: "axe", options: { tags: ["wcag2a"] } }]
+     * Phase 5: Added enabled flag for gradual rollout
      */
-    phases: z.record(z.array(z.union([z.string(), PluginConfigObjSchema]))).optional(),
+    nonHtmlPolicy: z.object({
+        /**
+         * Phase 5: Master feature flag for two-track model.
+         * When false, all discovered URLs are treated as auditable (legacy behavior).
+         * When true, resource triage and gating are active.
+         * Default: false for gradual rollout
+         */
+        enabled: z.boolean().default(false),
+        phases: z.record(z.array(z.union([z.string(), PluginConfigObjSchema]))).optional(),
 
-    /**
-     * If true, the system uses the internal default configuration
-     * as a base and merges the user config on top.
-     * Default: true
-     */
-    useDefaults: z.boolean().default(true),
+        /**
+         * Phase 4: Non-HTML resource policy (document, media, etc.)
+         */
+        nonHtmlPolicy: z.object({
+            /**
+             * If true, only audit HTML pages; non-HTML resources are inventory-only.
+             * Default: true
+             */
+            auditHtmlOnly: z.boolean().default(true),
+            /**
+             * If true, enable document audit lane (PDF, etc.).
+             * Default: false
+             */
+            auditDocuments: z.boolean().default(false),
+            /**
+             * Content types eligible for document audit.
+             * Default: ["application/pdf"]
+             */
+            documentContentTypes: z.array(z.string()).default(["application/pdf"]),
+        }).optional(),
 
-    // Legacy support (to be deprecated or mapped to 'global' phase)
-    plugins: z.array(z.string()).optional(),
-    outputFormat: z.enum(["json", "sqlite", "both"]).default("sqlite"),
-    outputDir: z.string().default("./artifacts"),
-});
+        /**
+         * If true, the system uses the internal default configuration
+         * as a base and merges the user config on top.
+         * Default: true
+         */
+        useDefaults: z.boolean().default(true),
 
-export type ScannerConfig = z.infer<typeof ScannerConfigSchema>;
+        // Legacy support (to be deprecated or mapped to 'global' phase)
+        plugins: z.array(z.string()).optional(),
+        outputFormat: z.enum(["json", "sqlite", "both"]).default("sqlite"),
+        outputDir: z.string().default("./artifacts"),
+    });
+
+    export type ScannerConfig = z.infer<typeof ScannerConfigSchema> & {
+        nonHtmlPolicy?: NonHtmlPolicy;
+    };

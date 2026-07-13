@@ -11,8 +11,25 @@ import type {
 import { getDb, initializeSchema } from '@scanner/db';
 import path from 'node:path';
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 let _db: ReturnType<typeof getDb> | null = null;
+
+function resolveDbPath() {
+    if (process.env.AWA_DB_PATH) {
+        return process.env.AWA_DB_PATH;
+    }
+
+    const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+    const candidates = [
+        path.resolve(process.cwd(), 'data/awa.sqlite'),
+        path.resolve(moduleDir, '../../../../data/awa.sqlite'),
+        path.resolve(process.cwd(), '../../data/awa.sqlite'),
+    ];
+
+    const existing = candidates.find((candidate) => fs.existsSync(candidate));
+    return existing || candidates[0];
+}
 
 export function getDatabase() {
     // In dev mode, or always for now to debug, let's create a fresh connection each request.
@@ -28,7 +45,7 @@ export function getDatabase() {
 
     if (!_db) {
         // Resolve to workspace root, fallback logic for dev vs prod running dirs could be mapped via env
-        const dbPath = process.env.AWA_DB_PATH || path.resolve(process.cwd(), '../../data/awa.sqlite');
+        const dbPath = resolveDbPath();
 
         console.log(`[Queries] Connecting to DB at: ${dbPath}`);
 
@@ -54,7 +71,7 @@ export function getStats(): DashboardStats {
     const activeRuns = db.prepare(`
         SELECT id, status, started_at, completed_at, config_json 
         FROM runs 
-        WHERE status IN ('running', 'pending')
+        WHERE status IN ('running', 'pending', 'paused')
         ORDER BY started_at DESC
     `).all() as { id: string, status: string, started_at: string, completed_at: string, config_json: string }[];
 
@@ -74,14 +91,32 @@ export function getStats(): DashboardStats {
     return targetRuns.map(run => {
         const runId = run.id;
 
-        // Count queue items by status
-        const counts = db.prepare(`
+        // Phase 3: Split metrics - discovery inventory vs audit execution
+        const splitMetrics = db.prepare(`
+            SELECT 
+                COUNT(*) as discovered_total,
+                SUM(CASE WHEN resource_type = 'html' THEN 1 ELSE 0 END) as discovered_html,
+                SUM(CASE WHEN resource_type = 'document' THEN 1 ELSE 0 END) as discovered_documents,
+                SUM(CASE WHEN resource_type = 'media' THEN 1 ELSE 0 END) as discovered_media,
+                SUM(CASE WHEN resource_type = 'binary' THEN 1 ELSE 0 END) as discovered_binary,
+                SUM(CASE WHEN resource_type = 'unknown' OR resource_type IS NULL THEN 1 ELSE 0 END) as discovered_unknown,
+                SUM(CASE WHEN audit_disposition IN ('auditable_html','auditable_document') AND status IN ('completed','failed') THEN 1 ELSE 0 END) as audited_total,
+                SUM(CASE WHEN audit_disposition IN ('auditable_html','auditable_document') AND status = 'completed' THEN 1 ELSE 0 END) as audited_completed,
+                SUM(CASE WHEN audit_disposition IN ('auditable_html','auditable_document') AND status = 'failed' THEN 1 ELSE 0 END) as audited_failed,
+                SUM(CASE WHEN status = 'skipped_non_html' THEN 1 ELSE 0 END) as skipped_non_html
+            FROM queue
+            WHERE run_id = ?
+        `).get(runId) as any;
+
+        // Legacy counts for backward compatibility
+        const legacyCounts = db.prepare(`
             SELECT 
                 COUNT(*) as total,
                 SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
                 SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
                 SUM(CASE WHEN status = 'stopped' THEN 1 ELSE 0 END) as stopped,
-                SUM(CASE WHEN status NOT IN ('completed', 'failed', 'stopped') THEN 1 ELSE 0 END) as pending
+                SUM(CASE WHEN status = 'skipped_non_html' THEN 1 ELSE 0 END) as skipped,
+                SUM(CASE WHEN status NOT IN ('completed', 'failed', 'stopped', 'skipped_non_html') THEN 1 ELSE 0 END) as pending
             FROM queue
             WHERE run_id = ?
         `).get(runId) as any;
@@ -111,15 +146,28 @@ export function getStats(): DashboardStats {
 
         return {
             runId,
+            description: urlLabel,
             status: run.status,
             created_at: run.started_at,
             completed_at: run.completed_at,
             url: urlLabel,
-            totalUrls: counts.total || 0,
-            pendingUrls: counts.pending || 0,
-            completedUrls: counts.completed || 0,
-            failedUrls: counts.failed || 0,
-            stoppedUrls: counts.stopped || 0,
+            // Phase 3: Split metrics
+            discoveredTotal: splitMetrics.discovered_total || 0,
+            discoveredHtml: splitMetrics.discovered_html || 0,
+            discoveredDocuments: splitMetrics.discovered_documents || 0,
+            discoveredMedia: splitMetrics.discovered_media || 0,
+            discoveredBinary: splitMetrics.discovered_binary || 0,
+            discoveredUnknown: splitMetrics.discovered_unknown || 0,
+            auditedTotal: splitMetrics.audited_total || 0,
+            auditedCompleted: splitMetrics.audited_completed || 0,
+            auditedFailed: splitMetrics.audited_failed || 0,
+            skippedNonHtml: splitMetrics.skipped_non_html || 0,
+            // Legacy fields for backward compatibility
+            totalUrls: legacyCounts.total || 0,
+            pendingUrls: legacyCounts.pending || 0,
+            completedUrls: legacyCounts.completed || 0,
+            failedUrls: legacyCounts.failed || 0,
+            stoppedUrls: legacyCounts.stopped || 0,
             totalViolations: violations
         };
     });
@@ -153,11 +201,13 @@ export function getQueue(): QueueItem[] {
       q.url, 
       q.status, 
       q.depth,
+            r.status as run_status,
       r.started_at as timestamp
     FROM queue q
     JOIN runs r ON q.run_id = r.id
-    WHERE q.status != 'completed'
-    ORDER BY q.id ASC
+        WHERE r.status IN ('running', 'pending', 'paused')
+            AND q.status IN ('pending', 'processing', 'processing_discovery', 'pending_audit', 'processing_audit')
+        ORDER BY q.id ASC
     LIMIT 10
   `).all() as QueueItem[];
 }
@@ -193,11 +243,15 @@ export function getRunDetails(runId: string): RunDetail | null {
 
     // Get Page List with Violation Counts
     // Optimized to avoid N+1 queries by joining findings
+    // Phase 3: Include resource_type, audit_disposition, skip_reason for inventory metadata
     const pages = db.prepare(`
     SELECT 
       q.url, 
       q.status, 
       q.depth,
+      q.resource_type,
+      q.audit_disposition,
+      q.skip_reason,
       COALESCE(SUM(a.count), 0) as violation_count,
       r.seo_score,
       r.seo_result,
@@ -258,6 +312,17 @@ export function getRunDetails(runId: string): RunDetail | null {
             }
         } catch {
             // ignore
+        }
+
+        // Phase 3: Map resource metadata from inventory
+        if (p.resource_type) {
+            page.resource_type = p.resource_type;
+        }
+        if (p.audit_disposition) {
+            page.audit_disposition = p.audit_disposition;
+        }
+        if (p.skip_reason) {
+            page.skip_reason = p.skip_reason;
         }
 
         return page;

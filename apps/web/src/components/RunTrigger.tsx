@@ -6,6 +6,8 @@ export default function RunTrigger() {
   const [urlList, setUrlList] = useState("");
   const [depth, setDepth] = useState<number | "">("");
   const [networkWait, setNetworkWait] = useState<number>(5000);
+  const [twoTrackEnabled, setTwoTrackEnabled] = useState<boolean>(false);
+  const [auditDocuments, setAuditDocuments] = useState<boolean>(false);
   const [plugins, setPlugins] = useState<string[]>([
     "axe",
     "lighthouse",
@@ -18,7 +20,13 @@ export default function RunTrigger() {
     setLoading(true);
     setMessage("");
 
-    const basePayload = { depth, plugins, networkIdleTimeout: networkWait };
+    const basePayload = {
+      depth,
+      plugins,
+      networkIdleTimeout: networkWait,
+      twoTrackEnabled,
+      auditDocuments,
+    };
     const payload =
       mode === "single"
         ? { url, ...basePayload }
@@ -183,6 +191,34 @@ export default function RunTrigger() {
                   </label>
                 ))}
               </div>
+            </div>
+            <div className="flex items-center gap-3 pt-1">
+              <label className="font-medium text-gray-700 w-24">Mode:</label>
+              <label className="flex items-center gap-1 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={twoTrackEnabled}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setTwoTrackEnabled(checked);
+                    if (!checked) setAuditDocuments(false);
+                  }}
+                  className="rounded text-blue-600 focus:ring-blue-500"
+                />
+                <span>Two-track</span>
+              </label>
+              <label className="flex items-center gap-1 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={auditDocuments}
+                  disabled={!twoTrackEnabled}
+                  onChange={(e) => setAuditDocuments(e.target.checked)}
+                  className="rounded text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                />
+                <span className={!twoTrackEnabled ? "text-gray-400" : ""}>
+                  Audit documents
+                </span>
+              </label>
             </div>
           </div>
         </div>

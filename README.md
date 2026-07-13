@@ -98,6 +98,9 @@ awa start [options]
 - `-d, --depth <number>`: Maximum crawl depth (default: `3`).
 - `-c, --config <path>`: Path to a configuration file (e.g., `awaconfig.json`).
 - `-p, --plugins <plugins...>`: Specific plugins to run (space-separated).
+- `--network-timeout <ms>`: Wait time for network idle in ms (default: `5000`, `0` disables wait).
+- `--two-track`: Enable two-track resource triage and non-HTML gating.
+- `--audit-documents`: Enable document audit lane (PDF/doc resources).
 
 **Examples:**
 
@@ -116,7 +119,17 @@ pnpm awa start -u https://example.com -d 1
 Run with specific plugins:
 
 ```bash
+<<<<<<< HEAD
 pnpm awa start -u https://example.com -p axe lighthouse
+=======
+npx tsx packages/cli/src/index.ts start -u https://example.com -p axe lighthouse
+
+# Enable two-track mode (non-HTML triage/gating)
+npx tsx packages/cli/src/index.ts start -u https://example.com --two-track
+
+# Enable two-track + document audits
+npx tsx packages/cli/src/index.ts start -u https://example.com --two-track --audit-documents
+>>>>>>> cf1296b (two tier strategy)
 ```
 
 ### Resume a Run (`awa resume`)
@@ -180,9 +193,53 @@ awa stop [options]
 pnpm awa stop --all
 ```
 
+### Pause a Run (`awa pause`)
+
+Pause a running audit run.
+
+**Syntax:**
+
+```bash
+awa pause --run-id <id>
+```
+
+**Options:**
+
+- `--run-id <id>`: **(Required)** The Run ID to pause.
+
+**Example:**
+
+```bash
+npx tsx packages/cli/src/index.ts pause --run-id run_12345
+```
+
+### Continue a Run (`awa continue`)
+
+Continue a paused audit run.
+
+**Syntax:**
+
+```bash
+awa continue --run-id <id>
+```
+
+**Options:**
+
+- `--run-id <id>`: **(Required)** The Run ID to continue.
+
+**Example:**
+
+```bash
+npx tsx packages/cli/src/index.ts continue --run-id run_12345
+```
+
 ### Export Results (`awa export`)
 
+<<<<<<< HEAD
 Export audit results to XLSX or CSV (ZIP) format.
+=======
+Export audit results to XLSX or CSV (ZIP).
+>>>>>>> cf1296b (two tier strategy)
 
 **Syntax:**
 
@@ -199,11 +256,43 @@ awa export --run-id <id> [options]
 **Examples:**
 
 ```bash
+<<<<<<< HEAD
 # Export as XLSX to a file
 pnpm awa export --run-id run_12345 --output report.xlsx
 
 # Export as CSV
 pnpm awa export --run-id run_12345 --format csv --output report.csv
+=======
+# Export as CSV
+npx tsx packages/cli/src/index.ts export --run-id run_12345 --format csv --output report.csv
+
+# Export as XLSX (default)
+npx tsx packages/cli/src/index.ts export --run-id run_12345 --output report.xlsx
+```
+
+### Flush Logs (`awa flush-logs`)
+
+Clears `scanner_run.log` in the current working directory.
+
+```bash
+npx tsx packages/cli/src/index.ts flush-logs
+```
+
+### Classify URL (`awa classify`)
+
+Test classification for a URL.
+
+**Syntax:**
+
+```bash
+awa classify -u <url> [-c configPath]
+```
+
+**Example:**
+
+```bash
+npx tsx packages/cli/src/index.ts classify -u https://example.com
+>>>>>>> cf1296b (two tier strategy)
 ```
 
 ### Reset Database (`awa reset`)

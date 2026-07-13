@@ -34,6 +34,30 @@ describe("Queue Management", () => {
     expect(job1!.id).not.toBe(job2!.id);
     expect(job1!.worker_id).toBe("worker_A");
     expect(job2!.worker_id).toBe("worker_B");
-    expect(job1!.status).toBe("processing");
+    expect(job1!.status).toBe("processing_discovery");
+  });
+
+  it("stores resource metadata when inserting jobs", () => {
+    const db = getDb(":memory:");
+    initializeSchema(db);
+    db.exec("INSERT INTO runs (id, started_at, config_hash) VALUES ('run1', 'now', 'hash')");
+
+    insertJob(db, {
+      run_id: "run1",
+      url: "https://example.com/files/brochure.pdf",
+      depth: 1,
+      priority: 7,
+      resource_type: "document",
+      audit_disposition: "auditable_document",
+      skip_reason: null,
+      source: "crawl",
+      discovered_from: "https://example.com/home",
+    });
+
+    const row = db.prepare("SELECT * FROM queue WHERE run_id = 'run1'").get() as any;
+    expect(row.resource_type).toBe("document");
+    expect(row.audit_disposition).toBe("auditable_document");
+    expect(row.source).toBe("crawl");
+    expect(row.discovered_from).toBe("https://example.com/home");
   });
 });

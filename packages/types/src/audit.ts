@@ -56,7 +56,18 @@ export interface AuditResults {
   pluginArgs?: Record<string, any>;
 }
 
+// Phase 4: Document audit support
+export interface DocumentAuditContext {
+  run_id: string;
+  url: string;
+  contentType?: string;
+  results: Partial<AuditResults>;
+  log: (msg: string) => void;
+  flags: { hasErrors: boolean };
+}
+
 export interface AuditPlugin {
   name: string;
-  run(ctx: AuditContext, options?: Record<string, any>): Promise<void>;
+  targets?: Array<"html" | "document" | "all">;
+  run(ctx: AuditContext | DocumentAuditContext, options?: Record<string, any>): Promise<void>;
 }

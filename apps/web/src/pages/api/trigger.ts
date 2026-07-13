@@ -16,7 +16,7 @@ export const POST: APIRoute = async ({ request }) => {
     } catch {
         return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400 });
     }
-    const { url, urls, depth: reqDepth, plugins, networkIdleTimeout } = body;
+    const { url, urls, depth: reqDepth, plugins, networkIdleTimeout, twoTrackEnabled, auditDocuments } = body;
 
     if ((!url || typeof url !== "string") && (!urls || !Array.isArray(urls) || urls.length === 0)) {
         return new Response(JSON.stringify({ error: "Invalid URL or URL list provided" }), {
@@ -66,6 +66,14 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (networkIdleTimeout !== undefined && networkIdleTimeout !== null) {
         cliArgs.push("--network-timeout", String(networkIdleTimeout));
+    }
+
+    if (twoTrackEnabled === true) {
+        cliArgs.push("--two-track");
+    }
+
+    if (auditDocuments === true) {
+        cliArgs.push("--audit-documents");
     }
 
     if (isDev) {

@@ -48,3 +48,25 @@ export function stopRun(db: Database, runId: string): void {
         AND status IN ('pending', 'processing', 'processing_discovery', 'pending_audit', 'processing_audit', 'running')
     `).run(runId);
 }
+
+export function pauseRun(db: Database, runId: string): void {
+    db.prepare("UPDATE runs SET status = 'paused', completed_at = NULL WHERE id = ?").run(runId);
+
+    db.prepare(`
+        UPDATE queue
+        SET status = 'pending', worker_id = NULL
+        WHERE run_id = ?
+        AND status IN ('processing', 'processing_discovery', 'processing_audit', 'pending_audit')
+    `).run(runId);
+}
+
+export function continueRun(db: Database, runId: string): void {
+    db.prepare("UPDATE runs SET status = 'running', completed_at = NULL WHERE id = ?").run(runId);
+
+    db.prepare(`
+        UPDATE queue
+        SET status = 'pending', worker_id = NULL
+        WHERE run_id = ?
+        AND status IN ('processing', 'processing_discovery', 'processing_audit', 'pending_audit')
+    `).run(runId);
+}

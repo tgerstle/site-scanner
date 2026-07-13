@@ -1,9 +1,16 @@
 #!/usr/bin/env node
 import { Command } from "commander";
+<<<<<<< HEAD
 import { logEvent, Orchestrator, analyzeRun, loadConfig, fetchSitemapUrls, setupFastContext, PageClassifier, flattenA11y, flattenPerformance, flattenSeo, generateGlobalRollup, generateCsvZipBuffer, generateXlsxBuffer } from "@scanner/core";
 import { getDb, initializeSchema, createRun, insertJob, stopRun } from "@scanner/db";
+=======
+import { ScannerConfig } from "types";
+import { logEvent, logRunMetrics, Orchestrator, analyzeRun, loadConfig, fetchSitemapUrls, normalizeUrl, setupFastContext, PageClassifier, flattenA11y, flattenPerformance, flattenSeo, generateGlobalRollup, generateCsvZipBuffer, generateXlsxBuffer } from "core";
+import { getDb, initializeSchema, createRun, insertJob, stopRun } from "db";
+>>>>>>> cf1296b (two tier strategy)
 import * as path from "node:path";
 import * as fs from "node:fs";
+import { triageResource } from "core";
 
 const program = new Command();
 
@@ -32,6 +39,8 @@ program
     .option("-d, --depth <number>", "Maximum crawl depth") // Remove default "3" to allow logic below to handle it
     .option("-p, --plugins <plugins...>", "Plugins to run")
     .option("--network-timeout <ms>", "Wait time for network idle in ms (default: 5000)")
+    .option("--two-track", "Enable two-track resource triage and non-HTML gating")
+    .option("--audit-documents", "Enable document audit lane (PDF/doc resources)")
     .action(async (options) => { // Updated to async
         try {
             // Determine targets
@@ -54,6 +63,16 @@ program
                 networkIdleTimeout: options.networkTimeout ? parseInt(options.networkTimeout, 10) : undefined
             });
 
+            // Allow runtime feature toggles from CLI/web trigger without requiring config-file edits.
+            if (options.twoTrack || options.auditDocuments) {
+                const existingPolicy = (config as any).nonHtmlPolicy || {};
+                (config as any).nonHtmlPolicy = {
+                    ...existingPolicy,
+                    enabled: options.twoTrack ? true : existingPolicy.enabled === true,
+                    auditDocuments: options.auditDocuments ? true : existingPolicy.auditDocuments === true,
+                };
+            }
+
             logEvent({
                 event: "run_started",
                 severity: "info",
@@ -67,6 +86,15 @@ program
 
             const runId = createRun(db, config);
             const discoveryMode = config.discovery?.mode || "crawl";
+            const twoTrackEnabled = config?.nonHtmlPolicy?.enabled === true;
+
+            if (twoTrackEnabled) {
+                logEvent({
+                    event: "two_track_enabled",
+                    severity: "info",
+                    message: "Two-track resource model active (resource triage + gating enabled)",
+                });
+            }
 
             // --- 1. Sitemap Ingestion ---
             if (discoveryMode === "sitemap" || discoveryMode === "hybrid") {
@@ -82,10 +110,22 @@ program
                     if (sitemapUrls.length > 0) {
                         const insertTx = db.transaction((urls: string[]) => {
                             for (const url of urls) {
-                                // Sitemap URLs are treated as "leaf" nodes (max depth) unless explicitly crawled
-                                // To avoid deep crawling from every sitemap entry.
-                                // But if 'sitemap' only, we just want to audit them.
-                                insertJob(db, { run_id: runId, url, depth: config.maxDepth, priority: 50 });
+                                // Phase 5: Conditionally apply triage based on feature flag
+                                const metadata = twoTrackEnabled
+                                    ? triageResource(url)
+                                    : { resourceType: "unknown", auditDisposition: "deferred", skipReason: null };
+
+                                insertJob(db, {
+                                    run_id: runId,
+                                    url,
+                                    depth: config.maxDepth,
+                                    priority: 50,
+                                    resource_type: metadata.resourceType,
+                                    audit_disposition: metadata.auditDisposition,
+                                    skip_reason: metadata.skipReason,
+                                    source: "sitemap",
+                                    discovered_from: sitemapUrl,
+                                });
                             }
                         });
                         insertTx(sitemapUrls);
@@ -102,13 +142,39 @@ program
                 // Insert explicit targets as seeds (depth 0)
                 // This triggers the Discovery Worker to crawl them
                 for (const url of targets) {
-                    insertJob(db, { run_id: runId, url, depth: 0, priority: 100 });
+                    // Phase 5: Conditionally apply triage based on feature flag
+                    const metadata = twoTrackEnabled
+                        ? triageResource(url)
+                        : { resourceType: "unknown", auditDisposition: "deferred", skipReason: null };
+
+                    insertJob(db, {
+                        run_id: runId,
+                        url,
+                        depth: 0,
+                        priority: 100,
+                        resource_type: metadata.resourceType,
+                        audit_disposition: metadata.auditDisposition,
+                        skip_reason: metadata.skipReason,
+                        source: "manual",
+                        discovered_from: null,
+                    });
                 }
             } else if (discoveryMode === "sitemap" && targets.length > 0) {
                 // Even in sitemap mode, explicit targets should probably be audited?
                 // Let's treat them as manual overrides
                 for (const url of targets) {
-                    insertJob(db, { run_id: runId, url, depth: config.maxDepth, priority: 100 });
+                    const triage = triageResource(url);
+                    insertJob(db, {
+                        run_id: runId,
+                        url,
+                        depth: config.maxDepth,
+                        priority: 100,
+                        resource_type: triage.resourceType,
+                        audit_disposition: triage.auditDisposition,
+                        skip_reason: triage.skipReason,
+                        source: "manual",
+                        discovered_from: null,
+                    });
                 }
             }
 
@@ -152,6 +218,9 @@ program
                         message: `Run ${runId} finished with status: ${finalStatus}`,
                         runId
                     });
+
+                    // Phase 5: Log operational metrics
+                    logRunMetrics(db, runId);
 
                     orchestrator.stopZombieDetection();
                     orchestrator.killAll();
@@ -349,6 +418,122 @@ program
             db.close();
         } catch (e: any) {
             console.error("Error stopping runs:", e.message);
+            process.exit(1);
+        }
+    });
+
+program
+    .command("pause")
+    .description("Pause a running audit run")
+    .requiredOption("--run-id <id>", "Pause a specific run ID")
+    .action((options) => {
+        try {
+            const dbPath = process.env.AWA_DB_PATH || path.resolve(process.cwd(), "data/awa.sqlite");
+            if (!fs.existsSync(dbPath)) {
+                console.error("No database found.");
+                process.exit(1);
+            }
+
+            const db = getDb(dbPath);
+            initializeSchema(db);
+
+            const run = db.prepare("SELECT id, pid, status FROM runs WHERE id = ?").get(options.runId) as any;
+            if (!run) {
+                console.error(`Run ID ${options.runId} not found.`);
+                process.exit(1);
+            }
+
+            if (run.status === "paused") {
+                console.log(`Run ${options.runId} is already paused.`);
+                db.close();
+                return;
+            }
+
+            if (run.status === "stopped" || run.status === "completed" || run.status === "failed") {
+                console.error(`Run ${options.runId} is already terminal (${run.status}).`);
+                db.close();
+                process.exit(1);
+            }
+
+            if (run.pid) {
+                try {
+                    process.kill(run.pid, 0);
+                    process.kill(run.pid, "SIGSTOP");
+                    console.log(`Sent SIGSTOP to PID ${run.pid} for run ${options.runId}`);
+                } catch (e: any) {
+                    if (e.code !== "ESRCH") {
+                        throw e;
+                    }
+                    console.warn(`Process ${run.pid} not found; pausing run state in DB only.`);
+                }
+            }
+
+            db.prepare("UPDATE runs SET status = 'paused', completed_at = NULL WHERE id = ?").run(options.runId);
+            db.prepare(`
+                UPDATE queue
+                SET status = 'pending', worker_id = NULL
+                WHERE run_id = ?
+                AND status IN ('processing', 'processing_discovery', 'processing_audit', 'pending_audit')
+            `).run(options.runId);
+            console.log(`Run ${options.runId} paused.`);
+            db.close();
+        } catch (e: any) {
+            console.error("Error pausing run:", e.message);
+            process.exit(1);
+        }
+    });
+
+program
+    .command("continue")
+    .description("Continue a paused audit run")
+    .requiredOption("--run-id <id>", "Continue a specific paused run ID")
+    .action((options) => {
+        try {
+            const dbPath = process.env.AWA_DB_PATH || path.resolve(process.cwd(), "data/awa.sqlite");
+            if (!fs.existsSync(dbPath)) {
+                console.error("No database found.");
+                process.exit(1);
+            }
+
+            const db = getDb(dbPath);
+            initializeSchema(db);
+
+            const run = db.prepare("SELECT id, pid, status FROM runs WHERE id = ?").get(options.runId) as any;
+            if (!run) {
+                console.error(`Run ID ${options.runId} not found.`);
+                process.exit(1);
+            }
+
+            if (run.status !== "paused") {
+                console.error(`Run ${options.runId} is not paused (current status: ${run.status}).`);
+                db.close();
+                process.exit(1);
+            }
+
+            if (run.pid) {
+                try {
+                    process.kill(run.pid, 0);
+                    process.kill(run.pid, "SIGCONT");
+                    console.log(`Sent SIGCONT to PID ${run.pid} for run ${options.runId}`);
+                } catch (e: any) {
+                    if (e.code !== "ESRCH") {
+                        throw e;
+                    }
+                    console.warn(`Process ${run.pid} not found; continuing run state in DB only.`);
+                }
+            }
+
+            db.prepare("UPDATE runs SET status = 'running', completed_at = NULL WHERE id = ?").run(options.runId);
+            db.prepare(`
+                UPDATE queue
+                SET status = 'pending', worker_id = NULL
+                WHERE run_id = ?
+                AND status IN ('processing', 'processing_discovery', 'processing_audit', 'pending_audit')
+            `).run(options.runId);
+            console.log(`Run ${options.runId} continued.`);
+            db.close();
+        } catch (e: any) {
+            console.error("Error continuing run:", e.message);
             process.exit(1);
         }
     });

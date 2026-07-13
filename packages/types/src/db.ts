@@ -1,4 +1,6 @@
 export type WorkerRole = "discovery" | "audit";
+export type ResourceType = "html" | "document" | "media" | "binary" | "unknown";
+export type AuditDisposition = "auditable_html" | "auditable_document" | "inventory_only" | "deferred";
 export type QueueStatus =
     | "pending"
     | "processing_discovery"
@@ -7,6 +9,7 @@ export type QueueStatus =
     | "processing" // Added for consolidated worker
     | "completed"
     | "failed"
+    | "skipped_non_html"
     | "stopped";
 
 export interface QueueRow {
@@ -17,4 +20,9 @@ export interface QueueRow {
     depth: number;
     priority: number;
     worker_id: string | null;
+    resource_type?: ResourceType;
+    audit_disposition?: AuditDisposition;
+    skip_reason?: string | null;
+    source?: "crawl" | "sitemap" | "manual" | null;
+    discovered_from?: string | null;
 }

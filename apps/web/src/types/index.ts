@@ -7,11 +7,28 @@ export interface RunSpecificStats {
     created_at: string;
     completed_at?: string; // ISO 8601 string
     url: string; // The primary URL or a label
+
+    // Discovery inventory metrics
+    discoveredTotal: number;
+    discoveredHtml: number;
+    discoveredDocuments: number;
+    discoveredMedia: number;
+    discoveredBinary: number;
+    discoveredUnknown: number;
+
+    // Audit execution metrics
+    auditedTotal: number;    // completed + failed auditable targets
+    auditedCompleted: number;
+    auditedFailed: number;
+    skippedNonHtml: number;
+
+    // Legacy compatibility fields (deprecated, use split metrics)
     totalUrls: number;
     pendingUrls: number;
     completedUrls: number;
     failedUrls: number;
     stoppedUrls: number;
+
     totalViolations: number;
 }
 
@@ -32,6 +49,7 @@ export interface QueueItem {
     id: number;
     url: string;
     status: string;
+    run_status?: string;
     depth: number;
     timestamp?: string; // ISO 8601 string
     pageTypes?: string[];
@@ -76,6 +94,11 @@ export interface PageSummary {
     pageTypes?: string[];
     redirectUrl?: string;
     seo_result?: SeoResult;
+
+    // Phase 3: Resource metadata from inventory
+    resource_type?: "html" | "document" | "media" | "binary" | "unknown";
+    audit_disposition?: "auditable_html" | "auditable_document" | "inventory_only" | "deferred";
+    skip_reason?: string;
 }
 
 export interface RunDetail extends RunSummary {

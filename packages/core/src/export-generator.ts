@@ -66,6 +66,40 @@ export async function generateXlsxBuffer(datasets: ExportDatasets): Promise<Buff
     seoSheet.addRows(datasets.seo);
     seoSheet.getRow(1).font = { bold: true };
 
+    // Phase 3: Tab 5: Resource Inventory Sheet
+    if (datasets.resource_inventory && datasets.resource_inventory.length > 0) {
+        const inventorySheet = workbook.addWorksheet('Resource Inventory');
+        inventorySheet.columns = [
+            { header: 'URL', key: 'url', width: 50 },
+            { header: 'Type', key: 'resource_type', width: 12 },
+            { header: 'Disposition', key: 'audit_disposition', width: 18 },
+            { header: 'Status', key: 'status', width: 12 },
+            { header: 'Skip Reason', key: 'skip_reason', width: 20 },
+            { header: 'Discovered From', key: 'discovered_from', width: 50 },
+            { header: 'Source', key: 'source', width: 10 },
+        ];
+        inventorySheet.addRows(datasets.resource_inventory);
+        inventorySheet.getRow(1).font = { bold: true };
+    }
+
+    // Phase 3: Tab 6: Audit Target Summary Sheet
+    if (datasets.audit_target_summary && datasets.audit_target_summary.length > 0) {
+        const auditTargetSheet = workbook.addWorksheet('Audit Target Summary');
+        auditTargetSheet.columns = [
+            { header: 'URL', key: 'url', width: 50 },
+            { header: 'Type', key: 'resource_type', width: 12 },
+            { header: 'Disposition', key: 'audit_disposition', width: 18 },
+            { header: 'Audit Status', key: 'audit_status', width: 12 },
+            { header: 'Violations', key: 'violation_count', width: 10 },
+            { header: 'SEO Score', key: 'seo_score', width: 10 },
+            { header: 'Performance', key: 'performance_score', width: 12 },
+            { header: 'Accessibility', key: 'accessibility_score', width: 14 },
+            { header: 'Best Practices', key: 'best_practices_score', width: 14 },
+        ];
+        auditTargetSheet.addRows(datasets.audit_target_summary);
+        auditTargetSheet.getRow(1).font = { bold: true };
+    }
+
     // Write to Buffer
     return Buffer.from(await workbook.xlsx.writeBuffer());
 }
@@ -95,6 +129,9 @@ export async function generateCsvZipBuffer(datasets: ExportDatasets): Promise<Bu
             { name: 'accessibility-audit.csv', data: datasets.a11y },
             { name: 'performance-audit.csv', data: datasets.performance },
             { name: 'seo-audit.csv', data: datasets.seo },
+            // Phase 3: Include inventory and audit target summary if available
+            ...(datasets.resource_inventory ? [{ name: 'resource-inventory.csv', data: datasets.resource_inventory }] : []),
+            ...(datasets.audit_target_summary ? [{ name: 'audit-target-summary.csv', data: datasets.audit_target_summary }] : []),
         ];
 
         for (const file of filesToMap) {

@@ -1,15 +1,20 @@
 import { WorkerLoop } from "./worker-base.js";
 import { runPipeline, type PluginExecutionConfig } from "./pipeline.js";
-import { resolvePlugins } from "./plugin-resolver.js";
+import { resolvePlugins, resolveDocumentPlugins } from "./plugin-resolver.js";
 import { runScenario } from "./scenarios/index.js";
 import { logEvent } from "./logger.js";
 import { claimNextJob, updateJobStatus, saveAuditResult, insertJob } from "@scanner/db";
 import type { Database } from "better-sqlite3";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
+<<<<<<< HEAD
 import type { ScannerConfig, AuditContext, AuditPlugin } from "@scanner/types";
+=======
+import type { ScannerConfig, AuditContext, AuditPlugin, PluginConfigObj, DocumentAuditContext } from "types";
+>>>>>>> cf1296b (two tier strategy)
 import { PageClassifier } from "./classifier.js";
 import { normalizeUrl } from "./url-utils.js";
 import { filterLinks } from "./discovery.js";
+import { triageResource, isTwoTrackModeEnabled } from "./resource-triage.js";
 
 // This will be dynamically loaded based on config, but for now we'll accept them in the constructor
 export class AuditWorker extends WorkerLoop {
@@ -67,9 +72,120 @@ export class AuditWorker extends WorkerLoop {
         });
     }
 
+    /**
+     * Phase 4: Resolve document-compatible plugins.
+     */
+    private resolveDocumentPlugins(): PluginExecutionConfig[] {
+        return resolveDocumentPlugins(this.pluginRegistry, this.config, (msg) => {
+            logEvent({
+                event: "worker_warning",
+                severity: "warn",
+                message: msg,
+                workerId: this.workerId
+            });
+        });
+    }
+
     async processJob(): Promise<void> {
         const job = claimNextJob(this.db, this.workerId, "audit");
         if (!job) {
+            return;
+        }
+
+        // Phase 5: Feature flag check for two-track model
+        const twoTrackEnabled = isTwoTrackModeEnabled(this.config);
+
+        // If two-track mode is disabled, skip all gating/disposition logic
+        // and treat everything as auditable HTML (legacy behavior)
+        if (!twoTrackEnabled && job.audit_disposition !== "auditable_html") {
+            logEvent({
+                event: "worker_log",
+                severity: "debug",
+                message: `Two-track mode disabled; treating ${job.url} as auditable HTML`,
+                workerId: this.workerId,
+            });
+            job.audit_disposition = "auditable_html";
+        }
+
+        // Phase 4: Document audit lane
+        if (job.audit_disposition === "auditable_document") {
+            if (!this.config.nonHtmlPolicy?.auditDocuments) {
+                updateJobStatus(this.db, job.id, "skipped_non_html");
+                logEvent({
+                    event: "worker_log",
+                    severity: "info",
+                    message: `Skipping document job ${job.id} (${job.url}) - document audit disabled`,
+                    workerId: this.workerId,
+                });
+                return;
+            }
+
+            try {
+                const docPlugins = this.resolveDocumentPlugins();
+                if (docPlugins.length === 0) {
+                    updateJobStatus(this.db, job.id, "skipped_non_html");
+                    logEvent({
+                        event: "worker_log",
+                        severity: "info",
+                        message: `Document job ${job.id} (${job.url}) has no compatible plugins`,
+                        workerId: this.workerId,
+                    });
+                    return;
+                }
+
+                const docCtx: DocumentAuditContext = {
+                    run_id: job.run_id,
+                    url: job.url,
+                    contentType: job.resource_type === "document" ? "application/pdf" : undefined,
+                    results: {},
+                    log: (msg) =>
+                        logEvent({
+                            event: "worker_log",
+                            severity: "info",
+                            message: msg,
+                            workerId: this.workerId,
+                        }),
+                    flags: { hasErrors: false },
+                };
+
+                // Run document-compatible plugins
+                await runPipeline(docCtx as any, docPlugins, { timeoutMs: 30000 });
+
+                logEvent({
+                    event: "worker_log",
+                    severity: "info",
+                    message: `Document audit complete for ${job.url}`,
+                    workerId: this.workerId,
+                });
+
+                saveAuditResult(this.db, {
+                    run_id: job.run_id,
+                    url: job.url,
+                    results: docCtx.results,
+                });
+
+                updateJobStatus(this.db, job.id, "completed");
+            } catch (err: any) {
+                logEvent({
+                    event: "worker_error",
+                    severity: "error",
+                    message: `Document audit error: ${err.message}`,
+                    workerId: this.workerId,
+                });
+                updateJobStatus(this.db, job.id, "failed");
+            }
+            return;
+        }
+
+        // Phase 2 + 3: HTML audit lane
+        if (job.audit_disposition !== "auditable_html") {
+            updateJobStatus(this.db, job.id, "skipped_non_html");
+            logEvent({
+                event: "worker_log",
+                severity: "info",
+                message: `Skipping non-HTML job ${job.id} (${job.url}) with disposition ${job.audit_disposition ?? "unknown"}`,
+                workerId: this.workerId,
+            });
             return;
         }
 
@@ -114,11 +230,18 @@ export class AuditWorker extends WorkerLoop {
                     if (filteredLinks.length > 0) {
                         const insertTx = this.db.transaction((urls: string[]) => {
                             for (const url of urls) {
+                                const triage = triageResource(url);
                                 insertJob(this.db, {
                                     run_id: job.run_id,
                                     url,
                                     depth: job.depth + 1,
                                     priority: 50
+                                    ,
+                                    resource_type: triage.resourceType,
+                                    audit_disposition: triage.auditDisposition,
+                                    skip_reason: triage.skipReason,
+                                    source: "crawl",
+                                    discovered_from: job.url
                                 });
                             }
                         });

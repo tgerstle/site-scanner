@@ -15,9 +15,9 @@ export function useDashboard(initialData: DashboardData) {
         const fetchDashboardData = async () => {
             try {
                 const [statsRes, queueRes, recentRes] = await Promise.all([
-                    fetch("/api/dashboard/stats"),
-                    fetch("/api/dashboard/queue"),
-                    fetch("/api/dashboard/recent"),
+                    fetch("/api/dashboard/stats", { cache: "no-store" }),
+                    fetch("/api/dashboard/queue", { cache: "no-store" }),
+                    fetch("/api/dashboard/recent", { cache: "no-store" }),
                 ]);
 
                 if (statsRes.ok && queueRes.ok && recentRes.ok) {

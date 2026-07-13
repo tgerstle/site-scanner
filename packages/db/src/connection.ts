@@ -71,6 +71,11 @@ export function initializeSchema(db: Database.Database): void {
       depth INTEGER NOT NULL DEFAULT 0,
       priority INTEGER NOT NULL DEFAULT 0,
       worker_id TEXT,
+      resource_type TEXT DEFAULT 'unknown',
+      audit_disposition TEXT DEFAULT 'deferred',
+      skip_reason TEXT,
+      source TEXT,
+      discovered_from TEXT,
       FOREIGN KEY (run_id) REFERENCES runs(id),
       UNIQUE(run_id, url)
     );
@@ -147,11 +152,20 @@ export function initializeSchema(db: Database.Database): void {
   }
 
   // 4. Queue updates
+<<<<<<< HEAD
   try {
     db.prepare(
       "ALTER TABLE queue ADD COLUMN duplicate_of INTEGER DEFAULT NULL REFERENCES queue(id)",
     ).run();
   } catch {}
+=======
+  try { db.prepare("ALTER TABLE queue ADD COLUMN duplicate_of INTEGER DEFAULT NULL REFERENCES queue(id)").run(); } catch (e) { }
+  try { db.prepare("ALTER TABLE queue ADD COLUMN resource_type TEXT DEFAULT 'unknown'").run(); } catch (e) { }
+  try { db.prepare("ALTER TABLE queue ADD COLUMN audit_disposition TEXT DEFAULT 'deferred'").run(); } catch (e) { }
+  try { db.prepare("ALTER TABLE queue ADD COLUMN skip_reason TEXT").run(); } catch (e) { }
+  try { db.prepare("ALTER TABLE queue ADD COLUMN source TEXT").run(); } catch (e) { }
+  try { db.prepare("ALTER TABLE queue ADD COLUMN discovered_from TEXT").run(); } catch (e) { }
+>>>>>>> cf1296b (two tier strategy)
 
   // 5. Results updates (Cascading Runner Phase 4)
   try {

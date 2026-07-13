@@ -1,17 +1,24 @@
 import { describe, it, expect, vi } from 'vitest';
+<<<<<<< HEAD
 import { resolvePlugins } from './plugin-resolver.js';
 import { ScannerConfig, AuditPlugin } from '@scanner/types';
+=======
+import { resolvePlugins, resolveDocumentPlugins } from './plugin-resolver.js';
+import { ScannerConfig, AuditPlugin } from 'types';
+>>>>>>> cf1296b (two tier strategy)
 
 describe('resolvePlugins', () => {
     // Mock Plugins
     const MockAxe: AuditPlugin = { name: 'axe', run: vi.fn() };
     const MockLighthouse: AuditPlugin = { name: 'lighthouse', run: vi.fn() };
     const MockSeo: AuditPlugin = { name: 'seo', run: vi.fn() };
+    const MockPdf: AuditPlugin = { name: 'pdf-audit', targets: ['document'], run: vi.fn() };
 
     const pluginRegistry = new Map<string, AuditPlugin>([
         ['axe', MockAxe],
         ['lighthouse', MockLighthouse],
-        ['seo', MockSeo]
+        ['seo', MockSeo],
+        ['pdf-audit', MockPdf]
     ]);
 
     it('should include global plugins by default', () => {
@@ -98,5 +105,79 @@ describe('resolvePlugins', () => {
         expect(result).toHaveLength(1);
         const item = result[0] as { plugin: AuditPlugin; options: any };
         expect(item.options.rules['color-contrast'].enabled).toBe(false);
+    });
+
+    it('should respect plugin target compatibility', () => {
+        const config: ScannerConfig = {
+            siteUrl: 'http://test.com',
+            phases: {
+                global: ['axe', 'pdf-audit']
+            }
+        } as any;
+
+        const htmlResult = resolvePlugins(pluginRegistry, config, ['global'], undefined, 'html');
+        const htmlNames = htmlResult.map(p => 'plugin' in p ? p.plugin.name : p.plugin.name);
+        expect(htmlNames).toContain('axe');
+        expect(htmlNames).not.toContain('pdf-audit');
+
+        const docResult = resolvePlugins(pluginRegistry, config, ['global'], undefined, 'document');
+        const docNames = docResult.map(p => 'plugin' in p ? p.plugin.name : p.plugin.name);
+        expect(docNames).toContain('pdf-audit');
+        expect(docNames).not.toContain('axe');
+    });
+});
+
+// Phase 4: Document-specific plugin resolution
+describe('resolveDocumentPlugins', () => {
+    const MockAxe: AuditPlugin = { name: 'axe', targets: ['html'], run: vi.fn() };
+    const MockPdfAudit: AuditPlugin = { name: 'pdf-audit', targets: ['document'], run: vi.fn() };
+    const MockUniversal: AuditPlugin = { name: 'universal-check', targets: ['all'], run: vi.fn() };
+
+    const pluginRegistry = new Map<string, AuditPlugin>([
+        ['axe', MockAxe],
+        ['pdf-audit', MockPdfAudit],
+        ['universal-check', MockUniversal]
+    ]);
+
+    it('should resolve only document-compatible plugins', () => {
+        const config: ScannerConfig = {
+            siteUrl: 'http://test.com',
+            phases: {
+                global: ['axe', 'pdf-audit', 'universal-check']
+            }
+        } as any;
+
+        const result = resolveDocumentPlugins(pluginRegistry, config);
+        expect(result).toHaveLength(2);
+        const names = result.map(p => (p as any).plugin.name);
+        expect(names).toContain('pdf-audit');
+        expect(names).toContain('universal-check');
+        expect(names).not.toContain('axe');
+    });
+
+    it('should warn when document plugin is missing', () => {
+        const config: ScannerConfig = {
+            siteUrl: 'http://test.com',
+            phases: {
+                global: ['missing-doc-plugin']
+            }
+        } as any;
+
+        const warnSpy = vi.fn();
+        resolveDocumentPlugins(pluginRegistry, config, warnSpy);
+
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("missing-doc-plugin"));
+    });
+
+    it('should fall back to legacy plugins array if phases.global is missing', () => {
+        const config: ScannerConfig = {
+            siteUrl: 'http://test.com',
+            plugins: ['pdf-audit'],
+            phases: {}
+        } as any;
+
+        const result = resolveDocumentPlugins(pluginRegistry, config);
+        expect(result).toHaveLength(1);
+        expect((result[0] as any).plugin.name).toBe('pdf-audit');
     });
 });
