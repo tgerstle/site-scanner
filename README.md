@@ -119,17 +119,13 @@ pnpm awa start -u https://example.com -d 1
 Run with specific plugins:
 
 ```bash
-<<<<<<< HEAD
 pnpm awa start -u https://example.com -p axe lighthouse
-=======
-npx tsx packages/cli/src/index.ts start -u https://example.com -p axe lighthouse
 
 # Enable two-track mode (non-HTML triage/gating)
-npx tsx packages/cli/src/index.ts start -u https://example.com --two-track
+pnpm awa start -u https://example.com --two-track
 
 # Enable two-track + document audits
-npx tsx packages/cli/src/index.ts start -u https://example.com --two-track --audit-documents
->>>>>>> cf1296b (two tier strategy)
+pnpm awa start -u https://example.com --two-track --audit-documents
 ```
 
 ### Resume a Run (`awa resume`)
@@ -235,11 +231,7 @@ npx tsx packages/cli/src/index.ts continue --run-id run_12345
 
 ### Export Results (`awa export`)
 
-<<<<<<< HEAD
-Export audit results to XLSX or CSV (ZIP) format.
-=======
 Export audit results to XLSX or CSV (ZIP).
->>>>>>> cf1296b (two tier strategy)
 
 **Syntax:**
 
@@ -255,28 +247,20 @@ awa export --run-id <id> [options]
 
 **Examples:**
 
-```bash
-<<<<<<< HEAD
+````bash
 # Export as XLSX to a file
 pnpm awa export --run-id run_12345 --output report.xlsx
 
 # Export as CSV
 pnpm awa export --run-id run_12345 --format csv --output report.csv
-=======
-# Export as CSV
-npx tsx packages/cli/src/index.ts export --run-id run_12345 --format csv --output report.csv
-
-# Export as XLSX (default)
-npx tsx packages/cli/src/index.ts export --run-id run_12345 --output report.xlsx
-```
 
 ### Flush Logs (`awa flush-logs`)
 
 Clears `scanner_run.log` in the current working directory.
 
 ```bash
-npx tsx packages/cli/src/index.ts flush-logs
-```
+pnpm awa flush-logs
+````
 
 ### Classify URL (`awa classify`)
 
@@ -291,8 +275,7 @@ awa classify -u <url> [-c configPath]
 **Example:**
 
 ```bash
-npx tsx packages/cli/src/index.ts classify -u https://example.com
->>>>>>> cf1296b (two tier strategy)
+pnpm awa classify -u https://example.com
 ```
 
 ### Reset Database (`awa reset`)

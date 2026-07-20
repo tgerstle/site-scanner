@@ -1,8 +1,5 @@
 import type Database from "better-sqlite3";
-<<<<<<< HEAD
-import type { QueueRow, WorkerRole, QueueStatus } from "@scanner/types";
-=======
-import type { AuditDisposition, QueueRow, QueueStatus, ResourceType, WorkerRole } from "types";
+import type { AuditDisposition, QueueRow, QueueStatus, ResourceType, WorkerRole } from "@scanner/types";
 
 export interface InsertJobOptions {
   run_id: string;

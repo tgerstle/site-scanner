@@ -6,11 +6,7 @@ import { logEvent } from "./logger.js";
 import { claimNextJob, updateJobStatus, saveAuditResult, insertJob } from "@scanner/db";
 import type { Database } from "better-sqlite3";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
-<<<<<<< HEAD
-import type { ScannerConfig, AuditContext, AuditPlugin } from "@scanner/types";
-=======
-import type { ScannerConfig, AuditContext, AuditPlugin, PluginConfigObj, DocumentAuditContext } from "types";
->>>>>>> cf1296b (two tier strategy)
+import type { ScannerConfig, AuditContext, AuditPlugin, PluginConfigObj, DocumentAuditContext } from "@scanner/types";
 import { PageClassifier } from "./classifier.js";
 import { normalizeUrl } from "./url-utils.js";
 import { filterLinks } from "./discovery.js";

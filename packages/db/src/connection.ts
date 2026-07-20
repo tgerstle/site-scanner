@@ -47,18 +47,18 @@ export function initializeSchema(db: Database.Database): void {
   // 2. Apply migrations for existing databases (idempotent)
   try {
     db.prepare("ALTER TABLE runs ADD COLUMN config_json TEXT").run();
-  } catch {}
+  } catch { }
   try {
     db.prepare("ALTER TABLE runs ADD COLUMN pid INTEGER").run();
-  } catch {}
+  } catch { }
   try {
     db.prepare(
       "ALTER TABLE runs ADD COLUMN status TEXT DEFAULT 'running'",
     ).run();
-  } catch {}
+  } catch { }
   try {
     db.prepare("ALTER TABLE runs ADD COLUMN completed_at TEXT").run();
-  } catch {}
+  } catch { }
 
   // 3. Create remaining tables
   try {
@@ -103,7 +103,7 @@ export function initializeSchema(db: Database.Database): void {
   // Apply migrations for results table
   try {
     db.prepare("ALTER TABLE results ADD COLUMN seo_result TEXT").run();
-  } catch {}
+  } catch { }
 
   try {
     db.exec(`
@@ -152,26 +152,18 @@ export function initializeSchema(db: Database.Database): void {
   }
 
   // 4. Queue updates
-<<<<<<< HEAD
-  try {
-    db.prepare(
-      "ALTER TABLE queue ADD COLUMN duplicate_of INTEGER DEFAULT NULL REFERENCES queue(id)",
-    ).run();
-  } catch {}
-=======
   try { db.prepare("ALTER TABLE queue ADD COLUMN duplicate_of INTEGER DEFAULT NULL REFERENCES queue(id)").run(); } catch (e) { }
   try { db.prepare("ALTER TABLE queue ADD COLUMN resource_type TEXT DEFAULT 'unknown'").run(); } catch (e) { }
   try { db.prepare("ALTER TABLE queue ADD COLUMN audit_disposition TEXT DEFAULT 'deferred'").run(); } catch (e) { }
   try { db.prepare("ALTER TABLE queue ADD COLUMN skip_reason TEXT").run(); } catch (e) { }
   try { db.prepare("ALTER TABLE queue ADD COLUMN source TEXT").run(); } catch (e) { }
   try { db.prepare("ALTER TABLE queue ADD COLUMN discovered_from TEXT").run(); } catch (e) { }
->>>>>>> cf1296b (two tier strategy)
 
   // 5. Results updates (Cascading Runner Phase 4)
   try {
     db.prepare("ALTER TABLE results ADD COLUMN page_types TEXT").run();
-  } catch {}
+  } catch { }
   try {
     db.prepare("ALTER TABLE results ADD COLUMN redirect_url TEXT").run();
-  } catch {}
+  } catch { }
 }

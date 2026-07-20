@@ -1,11 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-<<<<<<< HEAD
-import { resolvePlugins } from './plugin-resolver.js';
-import { ScannerConfig, AuditPlugin } from '@scanner/types';
-=======
 import { resolvePlugins, resolveDocumentPlugins } from './plugin-resolver.js';
-import { ScannerConfig, AuditPlugin } from 'types';
->>>>>>> cf1296b (two tier strategy)
+import { ScannerConfig, AuditPlugin } from '@scanner/types';
 
 describe('resolvePlugins', () => {
     // Mock Plugins
