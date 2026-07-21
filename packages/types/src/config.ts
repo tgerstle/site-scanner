@@ -4,6 +4,7 @@ import {
     PluginConfigObjSchema,
     PageDefinitionSchema,
     DiscoveryConfigSchema,
+    DEFAULT_DESKTOP_UA,
     type PluginConfigObj,
     type PageDefinition,
     type DiscoveryConfig
@@ -17,6 +18,7 @@ export {
     PluginConfigObjSchema,
     PageDefinitionSchema,
     DiscoveryConfigSchema,
+    DEFAULT_DESKTOP_UA,
     type PluginConfigObj,
     type PageDefinition,
     type DiscoveryConfig

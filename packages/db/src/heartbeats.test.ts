@@ -14,7 +14,7 @@ describe("Heartbeats", () => {
     initializeSchema(db);
 
     const now = Date.now();
-    updateHeartbeat(db, "worker_1", "discovery", now - 10000); // 10s ago
+    updateHeartbeat(db, "worker_1", "audit", now - 10000); // 10s ago
     updateHeartbeat(db, "worker_2", "audit", now - 70000); // 70s ago
 
     const deadWorkers = getDeadWorkers(db, now, 60000);
@@ -34,7 +34,7 @@ describe("Heartbeats", () => {
     insertJob(db, { run_id: "run1", url: "http://test.com", depth: 1 });
 
     // Claim it
-    const job = claimNextJob(db, "dead_worker", "discovery");
+    const job = claimNextJob(db, "dead_worker", "audit");
     expect(job?.status).toBe("processing");
     expect(job?.worker_id).toBe("dead_worker");
 

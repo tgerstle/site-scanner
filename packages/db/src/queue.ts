@@ -51,22 +51,18 @@ function inferDisposition(resourceType: ResourceType): AuditDisposition {
 
   return "inventory_only";
 }
->>>>>>> cf1296b (two tier strategy)
 
 export function claimNextJob(
   db: Database.Database,
   workerId: string,
-  role: WorkerRole,
+  _role: WorkerRole,
 ): QueueRow | null {
-  // Consolidated Worker: 'audit' role now processes 'pending' jobs directly.
-  // We prioritize 'pending' jobs. 
-  // Note: We might want to clear 'pending_audit' if we are migrating,
-  // but for new runs, everything starts as 'pending'.
+  // Consolidated Worker: the single 'audit' worker claims 'pending' jobs directly and
+  // performs discovery + auditing inline. (_role is retained for signature stability.)
+  const fromStatus = "pending";
+  const toStatus = "processing";
 
-  const fromStatus = role === "discovery" ? "pending" : "pending";
-  const toStatus = role === "discovery" ? "processing_discovery" : "processing";
-
-  // Grab the highest priority job that matches this role's pending state
+  // Grab the highest priority pending job
   const stmt = db.prepare(`
     UPDATE queue 
     SET status = ?, worker_id = ? 

@@ -2,6 +2,40 @@ import { describe, it, expect } from "vitest";
 import { resolve } from "node:path";
 import * as fs from "node:fs";
 import { loadConfig } from "./config.js";
+import { ScannerConfigSchema, DEFAULT_DESKTOP_UA } from "@scanner/types";
+
+describe("ScannerConfig — politeness & stealth fields", () => {
+  const base = { siteUrl: "https://example.com" };
+
+  it("applies defaults for the new fields", () => {
+    const c = ScannerConfigSchema.parse(base);
+    expect(c.concurrency).toBe(2);
+    expect(c.throttleMs).toBe(5000);
+    expect(c.throttleJitter).toBe(10);
+    expect(c.stealth).toBe(false);
+    expect(c.blockAssets).toBe(true);
+    expect(c.humanize).toBe(false);
+    expect(c.locale).toBe("en-US");
+    expect(c.viewport).toEqual({ width: 1920, height: 1080 });
+  });
+
+  it("defaults userAgent to a realistic UA with no HeadlessChrome token", () => {
+    const c = ScannerConfigSchema.parse(base);
+    expect(c.userAgent).toBe(DEFAULT_DESKTOP_UA);
+    expect(c.userAgent.toLowerCase()).not.toContain("headless");
+  });
+
+  it("rejects invalid values", () => {
+    expect(() => ScannerConfigSchema.parse({ ...base, concurrency: 0 })).toThrow();
+    expect(() => ScannerConfigSchema.parse({ ...base, throttleMs: -1 })).toThrow();
+    expect(() => ScannerConfigSchema.parse({ ...base, throttleJitter: 150 })).toThrow();
+  });
+
+  it("accepts a proxy object", () => {
+    const c = ScannerConfigSchema.parse({ ...base, proxy: { server: "http://p:3128" } });
+    expect(c.proxy?.server).toBe("http://p:3128");
+  });
+});
 
 describe("Configuration Loading", () => {
     it("loads from partial config object (overrides)", () => {
@@ -39,7 +73,7 @@ describe("Configuration Loading", () => {
         // Rely on DEFAULT_CONFIG providing 'phases.global'
         const config = loadConfig(undefined, { siteUrl: "https://merge.com" });
         expect(config.phases?.global).toBeDefined();
-        // Verify default value
-        expect(config.phases?.global).toContain("seo-tech");
+        // Verify default value (DEFAULT_CONFIG.phases.global)
+        expect(config.phases?.global).toContain("lighthouse");
     });
 });

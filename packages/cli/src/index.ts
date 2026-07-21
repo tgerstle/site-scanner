@@ -1,11 +1,25 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { ScannerConfig } from "@scanner/types";
-import { logEvent, logRunMetrics, Orchestrator, analyzeRun, loadConfig, fetchSitemapUrls, normalizeUrl, setupFastContext, PageClassifier, flattenA11y, flattenPerformance, flattenSeo, generateGlobalRollup, generateCsvZipBuffer, generateXlsxBuffer } from "@scanner/core";
-import { getDb, initializeSchema, createRun, insertJob, stopRun } from "@scanner/db";
+import type { ResourceType, AuditDisposition } from "@scanner/types";
+import { logEvent, logRunMetrics, Orchestrator, analyzeRun, loadConfig, fetchSitemapUrls, setupFastContext, PageClassifier, flattenA11y, flattenPerformance, flattenSeo, generateGlobalRollup, generateCsvZipBuffer, generateXlsxBuffer } from "@scanner/core";
+import { getDb, initializeSchema, createRun, insertJob, stopRun, getRunConfig } from "@scanner/db";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { triageResource } from "@scanner/core";
+
+/**
+ * Returns triage metadata for a URL when two-track mode is on, or a typed legacy-default
+ * (everything deferred/unknown) when off. Replaces the fallback ternary duplicated across
+ * the seed-insertion sites.
+ */
+function triageOrDefault(
+    url: string,
+    twoTrackEnabled: boolean,
+): { resourceType: ResourceType; auditDisposition: AuditDisposition; skipReason: string | null } {
+    return twoTrackEnabled
+        ? triageResource(url)
+        : { resourceType: "unknown", auditDisposition: "deferred", skipReason: null };
+}
 
 const program = new Command();
 
@@ -32,6 +46,18 @@ program
     .option("-u, --url <url>", "Target URL to audit (overrides config)")
     .option("-l, --list <urls>", "Comma-separated list of URLs to audit (audit only, no crawl)")
     .option("-d, --depth <number>", "Maximum crawl depth") // Remove default "3" to allow logic below to handle it
+    .option("-j, --concurrency <number>", "Number of parallel audit workers")
+    .option("--throttle <ms>", "Politeness delay between jobs per worker (ms)")
+    .option("--jitter <percent>", "Randomized jitter applied to throttle (0-100)")
+    .option("--stealth", "Enable anti-detection launch flags")
+    .option("--user-agent <ua>", "Custom browser User-Agent")
+    .option("--locale <locale>", "Browser locale (e.g. en-US)")
+    .option("--timezone <tz>", "Browser timezone (e.g. America/New_York)")
+    .option("--proxy <server>", "Proxy server (e.g. http://host:port)")
+    .option("--proxy-user <user>", "Proxy username")
+    .option("--proxy-pass <pass>", "Proxy password")
+    .option("--no-block-assets", "Do not block images/CSS/fonts in the discovery lane")
+    .option("--humanize", "Add randomized human-like delays before interactions")
     .option("-p, --plugins <plugins...>", "Plugins to run")
     .option("--network-timeout <ms>", "Wait time for network idle in ms (default: 5000)")
     .option("--two-track", "Enable two-track resource triage and non-HTML gating")
@@ -54,6 +80,19 @@ program
             const config = loadConfig(options.config, {
                 siteUrl: targets[0], // Primary URL (important for sitemap base url)
                 maxDepth: depth,
+                concurrency: options.concurrency ? parseInt(options.concurrency, 10) : undefined,
+                throttleMs: options.throttle !== undefined ? parseInt(options.throttle, 10) : undefined,
+                throttleJitter: options.jitter !== undefined ? parseInt(options.jitter, 10) : undefined,
+                stealth: options.stealth ? true : undefined,
+                userAgent: options.userAgent,
+                locale: options.locale,
+                timezoneId: options.timezone,
+                // commander sets blockAssets=false only when --no-block-assets is passed
+                blockAssets: options.blockAssets === false ? false : undefined,
+                humanize: options.humanize ? true : undefined,
+                proxy: options.proxy
+                    ? { server: options.proxy, username: options.proxyUser, password: options.proxyPass }
+                    : undefined,
                 plugins: options.plugins,
                 networkIdleTimeout: options.networkTimeout ? parseInt(options.networkTimeout, 10) : undefined
             });
@@ -106,9 +145,7 @@ program
                         const insertTx = db.transaction((urls: string[]) => {
                             for (const url of urls) {
                                 // Phase 5: Conditionally apply triage based on feature flag
-                                const metadata = twoTrackEnabled
-                                    ? triageResource(url)
-                                    : { resourceType: "unknown", auditDisposition: "deferred", skipReason: null };
+                                const metadata = triageOrDefault(url, twoTrackEnabled);
 
                                 insertJob(db, {
                                     run_id: runId,
@@ -138,9 +175,7 @@ program
                 // This triggers the Discovery Worker to crawl them
                 for (const url of targets) {
                     // Phase 5: Conditionally apply triage based on feature flag
-                    const metadata = twoTrackEnabled
-                        ? triageResource(url)
-                        : { resourceType: "unknown", auditDisposition: "deferred", skipReason: null };
+                    const metadata = triageOrDefault(url, twoTrackEnabled);
 
                     insertJob(db, {
                         run_id: runId,
@@ -180,10 +215,12 @@ program
             orchestrator.startZombieDetection();
 
             // Consolidated Worker Mode:
-            // We launch multiple "audit" workers that handle both discovery and auditing.
+            // We launch `concurrency` "audit" workers that handle both discovery and auditing.
             // This replaces the separate Discovery/Audit phases.
-            orchestrator.spawnWorker("audit", `${runId}_aud_1`);
-            orchestrator.spawnWorker("audit", `${runId}_aud_2`);
+            const workerCount = Math.max(1, config.concurrency ?? 2);
+            for (let i = 1; i <= workerCount; i++) {
+                orchestrator.spawnWorker("audit", `${runId}_aud_${i}`);
+            }
 
             // Poll for completion
             const checkInterval = setInterval(() => {
@@ -283,8 +320,14 @@ program
             const orchestrator = new Orchestrator(db);
             orchestrator.startZombieDetection();
 
-            const discoveryWorker = orchestrator.spawnWorker("discovery", `${options.runId}_disc_res`);
-            const auditWorker = orchestrator.spawnWorker("audit", `${options.runId}_aud_res`);
+            // Consolidated worker model: resume spawns 'audit' workers (which discover + audit
+            // inline), matching the `start` path. Concurrency is read from the stored run config
+            // so a resumed run honors the conditions it was started/paused under.
+            const runConfig = getRunConfig(db, options.runId) as any;
+            const concurrency = Math.max(1, runConfig?.concurrency ?? 2);
+            for (let i = 1; i <= concurrency; i++) {
+                orchestrator.spawnWorker("audit", `${options.runId}_aud_res_${i}`);
+            }
 
             process.on("SIGINT", () => {
                 logEvent({
@@ -293,8 +336,7 @@ program
                     message: "Stopping orchestrator...",
                 });
                 orchestrator.stopZombieDetection();
-                discoveryWorker.kill();
-                auditWorker.kill();
+                orchestrator.killAll();
                 db.close();
                 process.exit(0);
             });
@@ -652,7 +694,7 @@ program
             const classifier = new PageClassifier(config);
 
             console.log(`Classifying ${options.url}...`);
-            const { browser, context } = await setupFastContext();
+            const { browser, context } = await setupFastContext(config);
 
             try {
                 const page = await context.newPage();

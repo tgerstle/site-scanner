@@ -26,15 +26,15 @@ describe("Queue Management", () => {
       insertJob(db, { run_id: "run1", url: `http://test.com/${i}`, depth: 1 });
     }
     // Claim jobs
-    const job1 = claimNextJob(db, "worker_A", "discovery");
-    const job2 = claimNextJob(db, "worker_B", "discovery");
+    const job1 = claimNextJob(db, "worker_A", "audit");
+    const job2 = claimNextJob(db, "worker_B", "audit");
 
     expect(job1).toBeDefined();
     expect(job2).toBeDefined();
     expect(job1!.id).not.toBe(job2!.id);
     expect(job1!.worker_id).toBe("worker_A");
     expect(job2!.worker_id).toBe("worker_B");
-    expect(job1!.status).toBe("processing_discovery");
+    expect(job1!.status).toBe("processing");
   });
 
   it("stores resource metadata when inserting jobs", () => {

@@ -1,5 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { filterLinks } from "./discovery.js";
+import { filterLinks, buildAuditLaunchArgs } from "./discovery.js";
+
+describe("buildAuditLaunchArgs", () => {
+  it("always includes the CDP remote-debugging port (Lighthouse dependency)", () => {
+    const args = buildAuditLaunchArgs(9321, { stealth: false });
+    expect(args).toContain("--remote-debugging-port=9321");
+  });
+
+  it("adds automation-masking flag only when stealth is on", () => {
+    expect(buildAuditLaunchArgs(9222, { stealth: false })).not.toContain(
+      "--disable-blink-features=AutomationControlled",
+    );
+    const stealthArgs = buildAuditLaunchArgs(9222, { stealth: true });
+    expect(stealthArgs).toContain("--disable-blink-features=AutomationControlled");
+    // Even with stealth, the CDP port must survive.
+    expect(stealthArgs).toContain("--remote-debugging-port=9222");
+  });
+
+  it("never adds --no-sandbox by default", () => {
+    expect(buildAuditLaunchArgs(9222, { stealth: true })).not.toContain("--no-sandbox");
+  });
+});
 
 describe("filterLinks", () => {
   it("filters out non-matching domains", () => {

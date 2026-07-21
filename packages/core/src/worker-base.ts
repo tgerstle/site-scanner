@@ -1,16 +1,19 @@
-import type { WorkerRole, IPCMessage } from "@scanner/types";
+import type { WorkerRole, IPCMessage, ScannerConfig } from "@scanner/types";
 import { logEvent } from "./logger.js";
 
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
+const IDLE_FLOOR_MS = 250; // minimum sleep when no job was claimed, regardless of throttleMs
 
 export class WorkerLoop {
   protected role: WorkerRole;
   protected workerId: string;
+  protected config: ScannerConfig;
   protected heartbeatTimer?: NodeJS.Timeout;
 
-  constructor(role: WorkerRole, workerId: string) {
+  constructor(role: WorkerRole, workerId: string, config: ScannerConfig) {
     this.role = role;
     this.workerId = workerId;
+    this.config = config;
   }
 
   start() {
@@ -36,13 +39,32 @@ export class WorkerLoop {
     }
   }
 
-  protected async processJob(): Promise<void> {
-    // implemented by subclass
+  /**
+   * Implemented by subclass. Returns true if a job was claimed/processed, false if the
+   * queue was empty — the loop uses this to apply the idle floor instead of throttleMs.
+   */
+  protected async processJob(): Promise<boolean> {
+    return false;
+  }
+
+  /**
+   * Pure, testable delay calculator.
+   * - No job claimed => fixed IDLE_FLOOR_MS (cheap polling, ignores throttleMs so
+   *   throttleMs:0 does not busy-spin an empty queue).
+   * - Job processed => throttleMs +/- throttleJitter%, never negative.
+   */
+  protected computeDelay(didWork: boolean): number {
+    if (!didWork) return IDLE_FLOOR_MS;
+    const baseDelay = this.config.throttleMs ?? 5000;
+    const jitterFactor = (this.config.throttleJitter ?? 0) / 100;
+    const jitter = baseDelay * jitterFactor * (Math.random() * 2 - 1); // +/- range
+    return Math.max(0, baseDelay + jitter);
   }
 
   private async poll() {
+    let didWork = false;
     try {
-      await this.processJob();
+      didWork = await this.processJob();
     } catch (e) {
       logEvent({
         event: "worker_error",
@@ -51,6 +73,6 @@ export class WorkerLoop {
         error: String(e),
       });
     }
-    setTimeout(() => this.poll(), 5000);
+    setTimeout(() => this.poll(), this.computeDelay(didWork));
   }
 }

@@ -1,5 +1,5 @@
 import type { Database } from "better-sqlite3";
-import type { ExportDatasets, A11yRow, PerformanceRow, SeoRow, GlobalRollupRow } from "@scanner/types";
+import type { A11yRow, PerformanceRow, SeoRow, GlobalRollupRow } from "@scanner/types";
 
 function safeParse(jsonString: any): any {
     if (typeof jsonString === 'string') {
@@ -191,13 +191,4 @@ export function generateGlobalRollup(a11y: A11yRow[], perf: PerformanceRow[], se
     rows.sort((a, b) => b.totalOccurrences - a.totalOccurrences);
 
     return rows;
-}
-
-export function generateExportDatasets(db: Database, runId: string): ExportDatasets {
-    const a11y = flattenA11y(db, runId);
-    const performance = flattenPerformance(db, runId);
-    const seo = flattenSeo(db, runId);
-    const global = generateGlobalRollup(a11y, performance, seo);
-
-    return { global, a11y, performance, seo };
 }

@@ -1,4 +1,6 @@
-export type WorkerRole = "discovery" | "audit";
+// Consolidated worker model: a single "audit" worker performs discovery + auditing inline.
+// The former "discovery" role was removed (see specs/politeness-and-stealth/phase-0-consolidation.md).
+export type WorkerRole = "audit";
 export type ResourceType = "html" | "document" | "media" | "binary" | "unknown";
 export type AuditDisposition = "auditable_html" | "auditable_document" | "inventory_only" | "deferred";
 export type QueueStatus =

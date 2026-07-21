@@ -3,7 +3,6 @@ import type { WorkerRole } from "@scanner/types";
 import { logEvent } from "./logger.js";
 import { getDb, getRunConfig } from "@scanner/db"; // Implicitly returns ScannerConfig
 import * as path from "node:path";
-import { DiscoveryWorker } from "./discovery-worker.js";
 import { AuditWorker } from "./audit-worker.js";
 import { loadPlugins } from "./plugin-loader.js";
 import { pathToFileURL } from "node:url";
@@ -38,10 +37,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   // Retrieve configuration
   const runConfig = getRunConfig(db, runId) as ScannerConfig;
 
-  if (role === "discovery") {
-    worker = new DiscoveryWorker(workerId, db, runConfig);
-    worker.start();
-  } else {
+  {
+    // Consolidated worker: the single 'audit' worker performs discovery + auditing inline.
     // Collect all plugins needed for the run (legacy + cascading phases)
     const pluginSet = new Set<string>();
 
@@ -94,7 +91,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       });
   }
 
-  if (role === "discovery" || role === "audit") {
+  if (role === "audit") {
     // Clean shutdown
     const shutdown = () => {
       if (worker) worker.stop();

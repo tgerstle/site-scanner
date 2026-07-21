@@ -39,7 +39,7 @@ describe("Orchestrator", () => {
 
     const orchestrator = new Orchestrator(db, dummyWorkerPath);
 
-    const worker = orchestrator.spawnWorker("discovery", "test_worker_1");
+    const worker = orchestrator.spawnWorker("audit", "test_worker_1");
 
     // Wait for worker to exit
     await new Promise((resolve) => worker.on("exit", resolve));
@@ -62,7 +62,7 @@ describe("Orchestrator", () => {
     // mock DB state
     db.prepare("INSERT INTO heartbeats (worker_id, role, last_seen) VALUES (?, ?, ?)").run(
       "zombie_1",
-      "discovery",
+      "audit",
       Date.now() - 100000,
     );
     db.prepare(

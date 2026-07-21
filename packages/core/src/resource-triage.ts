@@ -1,4 +1,4 @@
-import type { AuditDisposition, ResourceType } from "types";
+import type { AuditDisposition, ResourceType } from "@scanner/types";
 
 const DOCUMENT_EXTENSIONS = new Set([
     "pdf",

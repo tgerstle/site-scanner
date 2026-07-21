@@ -5,18 +5,17 @@ import { runScenario } from "./scenarios/index.js";
 import { logEvent } from "./logger.js";
 import { claimNextJob, updateJobStatus, saveAuditResult, insertJob } from "@scanner/db";
 import type { Database } from "better-sqlite3";
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
+import type { Browser, BrowserContext, Page } from "playwright";
 import type { ScannerConfig, AuditContext, AuditPlugin, PluginConfigObj, DocumentAuditContext } from "@scanner/types";
 import { PageClassifier } from "./classifier.js";
 import { normalizeUrl } from "./url-utils.js";
-import { filterLinks } from "./discovery.js";
+import { filterLinks, discoverLinks, launchAuditBrowser, createStandardContext } from "./discovery.js";
 import { triageResource, isTwoTrackModeEnabled } from "./resource-triage.js";
 
 // This will be dynamically loaded based on config, but for now we'll accept them in the constructor
 export class AuditWorker extends WorkerLoop {
     private browser: Browser | null = null;
     private ctx: BrowserContext | null = null;
-    private config: ScannerConfig;
     private db: Database;
     private pluginRegistry: Map<string, AuditPlugin>;
     private cdpPort: number;
@@ -29,9 +28,8 @@ export class AuditWorker extends WorkerLoop {
         plugins: AuditPlugin[],
         cdpPort: number = 9222,
     ) {
-        super("audit", workerId);
+        super("audit", workerId, config);
         this.db = db;
-        this.config = config;
 
         // Index plugins by name for fast lookup, support "axe" alias for "axe-core"
         this.pluginRegistry = new Map();
@@ -82,10 +80,20 @@ export class AuditWorker extends WorkerLoop {
         });
     }
 
-    async processJob(): Promise<void> {
+    /**
+     * Opt-in behavioral realism (config.humanize): pause a randomized 500-1500ms before
+     * interacting, instead of acting instantly/uniformly. No-op when humanize is off.
+     */
+    private async humanDelay(min = 500, max = 1500): Promise<void> {
+        if (!this.config.humanize) return;
+        const ms = min + Math.random() * (max - min);
+        await new Promise((r) => setTimeout(r, ms));
+    }
+
+    async processJob(): Promise<boolean> {
         const job = claimNextJob(this.db, this.workerId, "audit");
         if (!job) {
-            return;
+            return false;
         }
 
         // Phase 5: Feature flag check for two-track model
@@ -113,7 +121,7 @@ export class AuditWorker extends WorkerLoop {
                     message: `Skipping document job ${job.id} (${job.url}) - document audit disabled`,
                     workerId: this.workerId,
                 });
-                return;
+                return true;
             }
 
             try {
@@ -126,7 +134,7 @@ export class AuditWorker extends WorkerLoop {
                         message: `Document job ${job.id} (${job.url}) has no compatible plugins`,
                         workerId: this.workerId,
                     });
-                    return;
+                    return true;
                 }
 
                 const docCtx: DocumentAuditContext = {
@@ -170,7 +178,7 @@ export class AuditWorker extends WorkerLoop {
                 });
                 updateJobStatus(this.db, job.id, "failed");
             }
-            return;
+            return true;
         }
 
         // Phase 2 + 3: HTML audit lane
@@ -182,24 +190,25 @@ export class AuditWorker extends WorkerLoop {
                 message: `Skipping non-HTML job ${job.id} (${job.url}) with disposition ${job.audit_disposition ?? "unknown"}`,
                 workerId: this.workerId,
             });
-            return;
+            return true;
         }
 
         if (!this.browser) {
-            this.browser = await chromium.launch({
-                args: [
-                    `--remote-debugging-port=${this.cdpPort}`,
-                    "--disable-gpu",
-                    "--disable-dev-shm-usage",
-                ],
-            });
-            this.ctx = await this.browser.newContext();
+            // Audit lane: keep the CDP port for Lighthouse and ALWAYS load assets
+            // (blockAssets=false) so CWV/perf + axe render correctly. Stealth flags are
+            // applied inside launchAuditBrowser when config.stealth is on.
+            this.browser = await launchAuditBrowser(this.cdpPort, this.config);
+            const ctx = await createStandardContext(this.browser, this.config, false);
+            this.ctx = ctx.context;
         }
 
         let page: Page | null = null;
 
         try {
             page = await this.ctx!.newPage();
+
+            // Behavioral realism: randomized pre-navigation delay when humanize is enabled.
+            await this.humanDelay();
 
             // Use domcontentloaded instead of networkidle to be more resilient to slow assets/analytics
             // Increase timeout to 60s
@@ -212,7 +221,7 @@ export class AuditWorker extends WorkerLoop {
             const discoveryMode = this.config.discovery?.mode || "crawl";
             if (discoveryMode !== "sitemap" && job.depth < this.config.maxDepth) {
                 try {
-                    const rawLinks = await page.$$eval("a", (els) => els.map((el) => (el as HTMLAnchorElement).href).filter(Boolean));
+                    const rawLinks = await discoverLinks(page);
                     const uniqueLinks = new Set<string>();
                     for (const raw of rawLinks) {
                         uniqueLinks.add(normalizeUrl(raw));
@@ -385,6 +394,9 @@ export class AuditWorker extends WorkerLoop {
                 await page.close().catch(() => { });
             }
         }
+        // A job was claimed and processed (success or failure) — signal work done
+        // so the loop applies throttleMs rather than the idle floor.
+        return true;
     }
 
     async stop(): Promise<void> {

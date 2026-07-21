@@ -41,7 +41,7 @@ describe('resolvePlugins', () => {
         const result = resolvePlugins(pluginRegistry, config, ['global', 'product']);
         expect(result).toHaveLength(2);
         // @ts-ignore
-        const names = result.map(p => 'plugin' in p ? p.plugin.name : p.plugin.name);
+        const names = result.map(p => 'plugin' in p ? p.plugin.name : p.name);
         expect(names).toContain('axe');
         expect(names).toContain('seo');
     });
@@ -111,12 +111,12 @@ describe('resolvePlugins', () => {
         } as any;
 
         const htmlResult = resolvePlugins(pluginRegistry, config, ['global'], undefined, 'html');
-        const htmlNames = htmlResult.map(p => 'plugin' in p ? p.plugin.name : p.plugin.name);
+        const htmlNames = htmlResult.map(p => 'plugin' in p ? p.plugin.name : p.name);
         expect(htmlNames).toContain('axe');
         expect(htmlNames).not.toContain('pdf-audit');
 
         const docResult = resolvePlugins(pluginRegistry, config, ['global'], undefined, 'document');
-        const docNames = docResult.map(p => 'plugin' in p ? p.plugin.name : p.plugin.name);
+        const docNames = docResult.map(p => 'plugin' in p ? p.plugin.name : p.name);
         expect(docNames).toContain('pdf-audit');
         expect(docNames).not.toContain('axe');
     });

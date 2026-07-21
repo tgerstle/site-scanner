@@ -1,6 +1,13 @@
 import { z } from "zod";
 
 /**
+ * Realistic desktop UA used when stealth is on and no explicit userAgent is set.
+ * Avoids Playwright's default "HeadlessChrome" token, the most obvious automation tell.
+ */
+export const DEFAULT_DESKTOP_UA =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+
+/**
  * Defines a rule to identify a specific page type (e.g., "Product", "Article").
  */
 export const PageDefinitionSchema = z.object({
@@ -98,6 +105,60 @@ export const ScannerConfigSchema = z.object({
     maxDepth: z.number().min(0).default(3),
 
     /**
+     * Number of parallel audit workers to spawn.
+     * Lowering this is the most effective way to reduce load on the target site.
+     */
+    concurrency: z.number().min(1).default(2),
+
+    /**
+     * Politeness delay (ms) between job completions within a single worker.
+     * Only applies between actual page loads; an empty queue polls at a fixed idle floor.
+     */
+    throttleMs: z.number().min(0).default(5000),
+
+    /**
+     * Randomized jitter (percentage, 0-100) applied to throttleMs to look less robotic.
+     * e.g. 10 => throttleMs +/- 10%.
+     */
+    throttleJitter: z.number().min(0).max(100).default(10),
+
+    /**
+     * Stealth / anti-detection settings.
+     * `stealth` toggles launch-flag masking; identity fields below always apply.
+     */
+    stealth: z.boolean().default(false),
+
+    /**
+     * Browser User-Agent. Defaults to a realistic desktop UA (never undefined) so stealth
+     * mode does not leak "HeadlessChrome". Set explicitly for a bot-honest string.
+     */
+    userAgent: z.string().default(DEFAULT_DESKTOP_UA),
+
+    /** Viewport. Single source of truth (schema-defaulted); code reads config.viewport directly. */
+    viewport: z.object({
+        width: z.number().default(1920),
+        height: z.number().default(1080),
+    }).default({ width: 1920, height: 1080 }),
+
+    locale: z.string().default("en-US"),
+    timezoneId: z.string().optional(), // e.g. "America/New_York"
+
+    proxy: z.object({
+        server: z.string(),
+        username: z.string().optional(),
+        password: z.string().optional(),
+    }).optional(),
+
+    /**
+     * Discovery-lane asset blocking (speed). The audit lane always loads assets
+     * (Lighthouse/CWV + axe require a rendered page) and ignores this flag.
+     */
+    blockAssets: z.boolean().default(true),
+
+    /** Opt-in behavioral realism: randomized delays before interactions. */
+    humanize: z.boolean().default(false),
+
+    /**
      * Optional: Wait for network idle before classification/auditing.
      * Default: 5000 (0 to disable wait)
      */
@@ -121,52 +182,26 @@ export const ScannerConfigSchema = z.object({
      * Maps a Page Type to a list of plugins to execute.
      * Key = Page Type ID
      * Value = Array of plugin names OR config objects.
-     * Phase 5: Added enabled flag for gradual rollout
      */
-    nonHtmlPolicy: z.object({
-        /**
-         * Phase 5: Master feature flag for two-track model.
-         * When false, all discovered URLs are treated as auditable (legacy behavior).
-         * When true, resource triage and gating are active.
-         * Default: false for gradual rollout
-         */
-        enabled: z.boolean().default(false),
-        phases: z.record(z.array(z.union([z.string(), PluginConfigObjSchema]))).optional(),
+    phases: z.record(z.array(z.union([z.string(), PluginConfigObjSchema]))).optional(),
 
-        /**
-         * Phase 4: Non-HTML resource policy (document, media, etc.)
-         */
-        nonHtmlPolicy: z.object({
-            /**
-             * If true, only audit HTML pages; non-HTML resources are inventory-only.
-             * Default: true
-             */
-            auditHtmlOnly: z.boolean().default(true),
-            /**
-             * If true, enable document audit lane (PDF, etc.).
-             * Default: false
-             */
-            auditDocuments: z.boolean().default(false),
-            /**
-             * Content types eligible for document audit.
-             * Default: ["application/pdf"]
-             */
-            documentContentTypes: z.array(z.string()).default(["application/pdf"]),
-        }).optional(),
+    /**
+     * If true, the system uses the internal default configuration
+     * as a base and merges the user config on top.
+     * Default: true
+     */
+    useDefaults: z.boolean().default(true),
 
-        /**
-         * If true, the system uses the internal default configuration
-         * as a base and merges the user config on top.
-         * Default: true
-         */
-        useDefaults: z.boolean().default(true),
+    // Legacy support (to be deprecated or mapped to 'global' phase)
+    plugins: z.array(z.string()).optional(),
+    outputFormat: z.enum(["json", "sqlite", "both"]).default("sqlite"),
+    outputDir: z.string().default("./artifacts"),
 
-        // Legacy support (to be deprecated or mapped to 'global' phase)
-        plugins: z.array(z.string()).optional(),
-        outputFormat: z.enum(["json", "sqlite", "both"]).default("sqlite"),
-        outputDir: z.string().default("./artifacts"),
-    });
+    /**
+     * Phase 4/5: Non-HTML resource policy (two-track model: triage + gating).
+     * Flat shape shared with NonHtmlPolicySchema. Optional for gradual rollout.
+     */
+    nonHtmlPolicy: NonHtmlPolicySchema,
+});
 
-    export type ScannerConfig = z.infer<typeof ScannerConfigSchema> & {
-        nonHtmlPolicy?: NonHtmlPolicy;
-    };
+    export type ScannerConfig = z.infer<typeof ScannerConfigSchema>;

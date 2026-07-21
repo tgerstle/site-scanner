@@ -8,3 +8,6 @@ debug/*
 debug
 
 scanner_run.log
+
+# Test coverage output
+coverage/

@@ -16,7 +16,7 @@ export const POST: APIRoute = async ({ request }) => {
     } catch {
         return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400 });
     }
-    const { url, urls, depth: reqDepth, plugins, networkIdleTimeout, twoTrackEnabled, auditDocuments } = body;
+    const { url, urls, depth: reqDepth, concurrency, throttleMs, throttleJitter, stealth, userAgent, locale, timezoneId, proxy, blockAssets, humanize, plugins, networkIdleTimeout, twoTrackEnabled, auditDocuments } = body;
 
     if ((!url || typeof url !== "string") && (!urls || !Array.isArray(urls) || urls.length === 0)) {
         return new Response(JSON.stringify({ error: "Invalid URL or URL list provided" }), {
@@ -57,6 +57,32 @@ export const POST: APIRoute = async ({ request }) => {
     // Add optional recursive depth
     if (reqDepth !== undefined && reqDepth !== null && String(reqDepth).trim() !== "") {
         cliArgs.push("-d", String(reqDepth));
+    }
+
+    // Add optional concurrency (number of parallel audit workers)
+    if (concurrency !== undefined && concurrency !== null && String(concurrency).trim() !== "") {
+        cliArgs.push("-j", String(concurrency));
+    }
+
+    // Add optional throttle / jitter (politeness delay between jobs)
+    if (throttleMs !== undefined && throttleMs !== null && String(throttleMs).trim() !== "") {
+        cliArgs.push("--throttle", String(throttleMs));
+    }
+    if (throttleJitter !== undefined && throttleJitter !== null && String(throttleJitter).trim() !== "") {
+        cliArgs.push("--jitter", String(throttleJitter));
+    }
+
+    // Stealth / anti-detection options (mirror config + CLI)
+    if (stealth === true) cliArgs.push("--stealth");
+    if (humanize === true) cliArgs.push("--humanize");
+    if (blockAssets === false) cliArgs.push("--no-block-assets");
+    if (typeof userAgent === "string" && userAgent.trim() !== "") cliArgs.push("--user-agent", userAgent);
+    if (typeof locale === "string" && locale.trim() !== "") cliArgs.push("--locale", locale);
+    if (typeof timezoneId === "string" && timezoneId.trim() !== "") cliArgs.push("--timezone", timezoneId);
+    if (proxy && typeof proxy === "object" && typeof proxy.server === "string" && proxy.server.trim() !== "") {
+        cliArgs.push("--proxy", proxy.server);
+        if (typeof proxy.username === "string" && proxy.username !== "") cliArgs.push("--proxy-user", proxy.username);
+        if (typeof proxy.password === "string" && proxy.password !== "") cliArgs.push("--proxy-pass", proxy.password);
     }
 
     // Add optional plugins
